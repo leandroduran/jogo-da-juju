@@ -69,11 +69,11 @@
 const CFG = {
   heroA: { name: "Juju", color: "#3b8fe6", dark:"#2660a8", belly:"#dff0ff", type:"jumper" }, // herói 1
   heroB: { name: "Papai", color: "#9b5de5", dark:"#6a3bb0", belly:"#f1e4ff", type:"thrower" }, // herói 2
-  helper:{ name: "Lili", color: "#ffd23f", dark:"#d49a00" },                                 // arara ajudante
+  helper:{ name: "Side", color: "#ffd23f", dark:"#d49a00" }, // o Side: nome igual em todas as fases, personagem diferente em cada uma (imagens em assets/epN/)
   speed: 4.2, gravity: 0.6, jumpA: -14.5, jumpB: -14.5, // os dois pulam igual e jogam coco igual; a liderança alterna nos pontos da fase e com a tecla C
   // Imagens opcionais: coloque PNGs com estes nomes na pasta assets/ ao lado do index.html
   // (fundo transparente, personagem olhando para a DIREITA). Se não existirem, usa o desenho padrão.
-  sprites: { heroA:"assets/heroi1.png", heroB:"assets/heroi2.png", helper:"assets/ajudante.png", heightA:200, heightB:200, heightHelper:150,
+  sprites: { heroA:"assets/heroi1.png", heroB:"assets/heroi2.png", helper1:"assets/ep1/ajudante.png", helper2:"assets/ep2/ajudante.png", heightA:200, heightB:200, heightHelper:150,
     // pixels de margem transparente ABAIXO dos pés em cada quadro (na escala original do PNG). Aumente se o personagem parecer flutuar.
     footA:22, footB:22, footHelper:22, shadow:false }, // altura em pixels na tela — aumente/diminua aqui
   helperOffset: 150, // distância da ajudante: positivo = vai à frente dos heróis, negativo = vem atrás
@@ -85,12 +85,13 @@ const CFG = {
   sheets: {
     heroA:{ file:"assets/heroi1_sheet.png", cols:6, rows:8, frames:{idle:2, walk:6, jump:6, arms:6}, fps:8 },
     heroB:{ file:"assets/heroi2_sheet.png", cols:6, rows:8, frames:{idle:2, walk:6, jump:6, arms:6}, fps:8 },
-    helper:{ file:"assets/ajudante_sheet.png", cols:6, rows:8, frames:{idle:2, walk:6, jump:6, arms:6}, fps:8 }, // 8 linhas (direita 0-3, esquerda 4-7), quadros 128×128
+    helper1:{ file:"assets/ep1/ajudante_sheet.png", cols:6, rows:8, frames:{idle:2, walk:6, jump:6, arms:6}, fps:8 }, // Side do episódio 1 (ilha)
+    helper2:{ file:"assets/ep2/ajudante_sheet.png", cols:6, rows:8, frames:{idle:2, walk:6, jump:6, arms:6}, fps:8 }, // Side do episódio 2 (navio)
     // caranguejo: 6 linhas — 0 parado frente, 1 andando frente, 2 garras frente, 3 parado costas, 4 andando costas, 5 garras costas (quadros 512×512)
-    crab:{ file:"assets/caranguejo_sheet.png", cols:6, rows:6, frames:{idle:2, walk:6, claws:6, idleBack:2, walkBack:6, clawsBack:6}, fps:8, height:95, foot:70 },
+    crab:{ file:"assets/ep1/caranguejo_sheet.png", cols:6, rows:6, frames:{idle:2, walk:6, claws:6, idleBack:2, walkBack:6, clawsBack:6}, fps:8, height:95, foot:70 },
     // piratas da fase 2 (opcionais): mesmo esquema dos heróis — linhas: parado, andando, pulando (usada quando tonto), braços (jogando barril); 4 linhas olhando pra DIREITA (o jogo espelha) ou 8 linhas
-    pirate:{ file:"assets/pirata_sheet.png", cols:6, rows:4, frames:{idle:2, walk:6, jump:6, arms:6}, fps:8, height:150, foot:22 },
-    captain:{ file:"assets/capitao_sheet.png", cols:6, rows:4, frames:{idle:2, walk:6, jump:6, arms:6}, fps:8, height:220, foot:22 },
+    pirate:{ file:"assets/ep2/pirata_sheet.png", cols:6, rows:4, frames:{idle:2, walk:6, jump:6, arms:6}, fps:8, height:150, foot:22 },
+    captain:{ file:"assets/ep2/capitao_sheet.png", cols:6, rows:4, frames:{idle:2, walk:6, jump:6, arms:6}, fps:8, height:220, foot:22 },
   },
 };
 // =========================================================================
@@ -103,9 +104,9 @@ const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 // ---------- Sprites opcionais ----------
 const IMG={};
-for(const k of ['heroA','heroB','helper']){ const im=new Image(); im.onload=()=>{IMG[k]=im;}; im.onerror=()=>{}; im.src=CFG.sprites[k]; }
+for(const k of ['heroA','heroB','helper1','helper2']){ const im=new Image(); im.onload=()=>{IMG[k]=im;}; im.onerror=()=>{}; im.src=CFG.sprites[k]; }
 const SHEET={};
-for(const k of ['heroA','heroB','helper','crab','pirate','captain']){ const im=new Image(); im.onload=()=>{SHEET[k]=im;}; im.onerror=()=>{}; im.src=CFG.sheets[k].file; }
+for(const k of ['heroA','heroB','helper1','helper2','crab','pirate','captain']){ const im=new Image(); im.onload=()=>{SHEET[k]=im;}; im.onerror=()=>{}; im.src=CFG.sheets[k].file; }
 
 // ---------- Mundo ----------
 let LEVEL=1, LEVEL_W=7000;
@@ -220,7 +221,7 @@ let jHeld=false, zHeld=false, xHeld=false, cHeld=false;
 const wrap=document.getElementById('wrap');
 window.onerror=(m,s,l)=>{ const e=document.getElementById('err'); e.style.display='block'; e.textContent='Erro: '+m+' (linha '+l+')'; };
 function startGame(){ overlay.classList.add('hidden'); cut=null; reset(); wrap.focus(); startMusic();
-  const missing=['heroA','heroB','helper'].filter(k=>!IMG[k]&&!SHEET[k]).map(k=>CFG.sprites[k]+' ou '+CFG.sheets[k].file);
+  const missing=['heroA','heroB','helper'+LEVEL].filter(k=>!IMG[k]&&!SHEET[k]).map(k=>CFG.sprites[k]+' ou '+CFG.sheets[k].file);
   if(missing.length && missing.length<3) setTimeout(()=>say('Imagem não encontrada: '+missing.join(', ')+' (precisa estar na pasta assets/)',4000),3600);
   if(missing.length===3 && location.protocol==='file:') setTimeout(()=>say('Sem imagens na pasta — usando os desenhos padrão.',2500),3600);
 }
@@ -729,8 +730,9 @@ function rr(x,y,w,h,r){ ctx.beginPath(); if(ctx.roundRect){ ctx.roundRect(x,y,w,
 
 function drawBird(){
   const x=bird.x-cam, y=bird.y, w=Math.sin(bird.wing)*10;
-  if(SHEET.helper){ const sh=SHEET.helper, cfg=CFG.sheets.helper; const anim=(bird.armsT>0&&cfg.frames.arms)?'arms':(bird.armsT>0?'jump':(bird.walking?'walk':'idle')), n=cfg.frames[anim]; const fi=anim==='arms'?Math.min(n-1,Math.floor((1-bird.armsT/60)*n)):Math.floor(Date.now()/(1000/cfg.fps))%n; drawSheetFrame(sh,cfg,anim,fi,bird.face,x,y,CFG.sprites.heightHelper,false,CFG.sprites.footHelper); return; }
-  if(IMG.helper){ const im=IMG.helper, hh=CFG.sprites.heightHelper, ww=hh*im.width/im.height; ctx.save(); ctx.translate(x,y); ctx.scale(bird.face,1); ctx.drawImage(im,-ww/2,-hh+CFG.sprites.footHelper*hh/im.height,ww,hh); ctx.restore(); return; }
+  const HK='helper'+LEVEL;
+  if(SHEET[HK]){ const sh=SHEET[HK], cfg=CFG.sheets[HK]; const anim=(bird.armsT>0&&cfg.frames.arms)?'arms':(bird.armsT>0?'jump':(bird.walking?'walk':'idle')), n=cfg.frames[anim]; const fi=anim==='arms'?Math.min(n-1,Math.floor((1-bird.armsT/60)*n)):Math.floor(Date.now()/(1000/cfg.fps))%n; drawSheetFrame(sh,cfg,anim,fi,bird.face,x,y,CFG.sprites.heightHelper,false,CFG.sprites.footHelper); return; }
+  if(IMG[HK]){ const im=IMG[HK], hh=CFG.sprites.heightHelper, ww=hh*im.width/im.height; ctx.save(); ctx.translate(x,y); ctx.scale(bird.face,1); ctx.drawImage(im,-ww/2,-hh+CFG.sprites.footHelper*hh/im.height,ww,hh); ctx.restore(); return; }
   // desenho padrão: passarinha pousada/andando no chão
   ctx.save(); ctx.translate(x,y-14+(bird.walking?Math.abs(Math.sin(bird.wing*1.5))*-4:0)); ctx.scale(bird.face,1);
   ctx.fillStyle=CFG.helper.color; ctx.beginPath(); ctx.ellipse(0,0,16,11,0,0,Math.PI*2); ctx.fill();

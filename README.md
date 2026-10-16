@@ -1,6 +1,6 @@
 # Jogo da Juju
 
-Jogo de plataforma em HTML/Canvas, feito para a Juju. Dois heróis (Juju e Papai) e a ajudante Lili exploram uma ilha, acham um tesouro, são capturados por piratas e tomam o navio.
+Jogo de plataforma em HTML/Canvas, feito para a Juju. Dois heróis (Juju e Papai) e o Side (um ajudante diferente em cada episódio) exploram uma ilha, acham um tesouro, são capturados por piratas e tomam o navio.
 
 **Jogar:** abra `index.html` no navegador — ou, publicado no GitHub Pages, acesse pelo link do repositório (funciona em tablet e celular, com botões na tela).
 

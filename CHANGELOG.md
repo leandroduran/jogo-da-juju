@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.1
+- Ajudante passa a se chamar **Side** em todas as fases, com um personagem diferente por episódio.
+- Imagens reorganizadas por episódio: `assets/ep1/`, `assets/ep2/`; heróis continuam em `assets/`.
+
 ## 0.2.0 — Episódio 2: O Navio Pirata
 - Cutscene de captura ao achar o tesouro (navio no horizonte, rede, título do episódio).
 - Fase do navio: cela com chave trazida pela ajudante, piratas jogando barris, cordas de escalada nos mastros, escotilhas, espada pirata, capitão com 3 vidas, bandeira troca ao vencer.
