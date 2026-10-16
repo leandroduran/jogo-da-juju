@@ -2,8 +2,15 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <title>Jogo da Juju</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Jogo da Juju">
+<meta name="theme-color" content="#1b3c58">
+<link rel="apple-touch-icon" href="assets/icon.png">
+<link rel="manifest" href='data:application/manifest+json,{"name":"Jogo da Juju","short_name":"Juju","start_url":".","display":"fullscreen","orientation":"landscape","background_color":"%231b3c58","theme_color":"%231b3c58","icons":[{"src":"assets/icon.png","sizes":"512x512","type":"image/png"}]}'>
 <style>
   :root{
     --sky1:#8fd3ff; --sky2:#dff5ff; --sea:#2b8fc7; --sand:#f1d9a0; --sand2:#d9b56e;
@@ -13,7 +20,7 @@
     color-scheme:light;
   }
   @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --paper:#fff7e4; --ink:#2a2420; } }
-  html,body{height:100%;margin:0;background:#1b3c58;}
+  html,body{height:100%;margin:0;background:#1b3c58;overscroll-behavior:none}
   body{font-family:"Baloo 2","Fredoka",ui-rounded,system-ui,sans-serif;color:var(--ink);display:flex;align-items:center;justify-content:center;overflow:hidden}
   #wrap{position:relative;width:100%;max-width:1100px;max-height:100%;display:flex;flex-direction:column;align-items:center}
   #stage{position:relative;width:100%;aspect-ratio:16/9}
@@ -34,6 +41,11 @@
   #touch{display:none;width:100%;box-sizing:border-box;padding:8px 3% 0;justify-content:space-between;align-items:center;gap:12px}
   #touch.on{display:flex}
   .grp{display:flex;gap:min(14px,2vw);align-items:center;height:100%}
+  /* celular deitado (pouca altura): botões translúcidos por cima do jogo, nos cantos */
+  #wrap.over #touch.on{position:absolute;inset:0;height:auto !important;padding:0 2% 2%;align-items:flex-end;pointer-events:none}
+  #wrap.over .grp{pointer-events:none;height:auto;align-items:flex-end}
+  #wrap.over .tb{pointer-events:auto;background:rgba(255,247,228,.38);box-shadow:none;width:min(11vw,17vh)} #wrap.over #tJ{width:min(13vw,21vh)} #wrap.over #tC{width:min(8vw,12vh)}
+  #wrap.over .tb:active,#wrap.over .tb.down{background:rgba(255,122,61,.85)}
   .tb{width:min(13vw,120px,20vh);aspect-ratio:1;border-radius:50%;border:0;background:rgba(255,247,228,.55);color:#2a2420;font:inherit;font-weight:800;font-size:clamp(18px,4vw,30px);pointer-events:auto;touch-action:none;user-select:none;-webkit-user-select:none;box-shadow:0 4px 0 rgba(0,0,0,.25)}
   .tb:active,.tb.down{background:rgba(255,122,61,.9);color:#fff}
   #tJ{width:min(16vw,140px,24vh)} #tC{width:min(9vw,72px,14vh);font-size:clamp(14px,3vw,22px)}
@@ -331,8 +343,10 @@ if(isTouch){ touchUI.classList.add('on'); document.getElementById('ctrlHelp').te
 const stage=document.getElementById('stage');
 function layout(){
   const on=touchUI.classList.contains('on');
-  const padH = on ? Math.round(Math.min(150, Math.max(84, innerHeight*0.22))) : 0;
-  const availH = innerHeight - padH - (on?16:0);
+  const over = on && innerHeight<520;            // celular deitado: botões por cima
+  wrap.classList.toggle('over',over);
+  const padH = (on&&!over) ? Math.round(Math.min(150, Math.max(84, innerHeight*0.22))) : 0;
+  const availH = innerHeight - padH - ((on&&!over)?16:0);
   const w = Math.floor(Math.min(innerWidth, 1100, availH*16/9));
   stage.style.width = w+'px'; wrap.style.width = w+'px'; touchUI.style.height = padH+'px';
 }
