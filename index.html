@@ -15,7 +15,8 @@
   @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --paper:#fff7e4; --ink:#2a2420; } }
   html,body{height:100%;margin:0;background:#1b3c58;}
   body{font-family:"Baloo 2","Fredoka",ui-rounded,system-ui,sans-serif;color:var(--ink);display:flex;align-items:center;justify-content:center;overflow:hidden}
-  #wrap{position:relative;width:100%;max-width:1100px;aspect-ratio:16/9;max-height:100%}
+  #wrap{position:relative;width:100%;max-width:1100px;max-height:100%;display:flex;flex-direction:column;align-items:center}
+  #stage{position:relative;width:100%;aspect-ratio:16/9}
   canvas{display:block;width:100%;height:100%;image-rendering:auto;border-radius:12px;background:var(--sky1)}
   #hud{position:absolute;left:0;right:0;top:0;padding:10px 14px;display:flex;justify-content:space-between;pointer-events:none;font-weight:700;font-size:clamp(14px,2vw,20px);color:#fff;text-shadow:0 2px 0 rgba(0,0,0,.35)}
   #msg{position:absolute;left:50%;top:52px;transform:translateX(-50%);max-width:70%;background:rgba(255,247,228,.92);color:var(--ink);border-radius:14px;padding:8px 16px;font-size:clamp(13px,1.8vw,19px);font-weight:700;box-shadow:0 4px 0 rgba(0,0,0,.18);opacity:0;transition:opacity .25s;pointer-events:none;text-align:center}
@@ -29,11 +30,13 @@
   #overlay button.small{font-size:clamp(12px,1.6vw,16px);padding:8px 18px;background:rgba(255,247,228,.25);box-shadow:none;color:#fff}
   .hidden{display:none !important}
   kbd{background:rgba(255,255,255,.2);border-radius:6px;padding:1px 7px}
-  #touch{position:absolute;inset:0;pointer-events:none;display:none}
-  #touch.on{display:block}
-  .tb{position:absolute;bottom:4%;width:17%;max-width:110px;aspect-ratio:1;border-radius:50%;border:0;background:rgba(255,247,228,.55);color:#2a2420;font:inherit;font-weight:800;font-size:clamp(18px,4vw,30px);pointer-events:auto;touch-action:none;user-select:none;-webkit-user-select:none;box-shadow:0 4px 0 rgba(0,0,0,.25)}
+  /* botões de toque numa faixa ABAIXO do jogo, pra não cobrir os personagens */
+  #touch{display:none;width:100%;box-sizing:border-box;padding:8px 3% 0;justify-content:space-between;align-items:center;gap:12px}
+  #touch.on{display:flex}
+  .grp{display:flex;gap:min(14px,2vw);align-items:center;height:100%}
+  .tb{width:min(13vw,120px,20vh);aspect-ratio:1;border-radius:50%;border:0;background:rgba(255,247,228,.55);color:#2a2420;font:inherit;font-weight:800;font-size:clamp(18px,4vw,30px);pointer-events:auto;touch-action:none;user-select:none;-webkit-user-select:none;box-shadow:0 4px 0 rgba(0,0,0,.25)}
   .tb:active,.tb.down{background:rgba(255,122,61,.9);color:#fff}
-  #tL{left:4%} #tR{left:24%} #tX{right:24%;bottom:22%} #tZ{right:4%;bottom:22%} #tJ{right:14%;width:22%;max-width:140px} #tC{left:14%;bottom:24%;width:12%;max-width:70px;font-size:clamp(14px,3vw,22px)}
+  #tJ{width:min(16vw,140px,24vh)} #tC{width:min(9vw,72px,14vh);font-size:clamp(14px,3vw,22px)}
   #padBtn,#musBtn{position:absolute;top:8px;left:50%;transform:translateX(-50%);border:0;background:rgba(255,247,228,.6);border-radius:999px;padding:4px 12px;font-size:18px;cursor:pointer}
   #musBtn{left:calc(50% + 56px)}
   #err{position:absolute;top:48px;left:50%;transform:translateX(-50%);background:#c0392b;color:#fff;padding:8px 14px;border-radius:10px;font-size:14px;display:none;max-width:90%}
@@ -42,26 +45,32 @@
 </head>
 <body>
 <div id="wrap" tabindex="0">
+ <div id="stage">
   <canvas id="c" width="1280" height="720"></canvas>
   <div id="hud"><span id="hudL"></span><span id="hudR"></span></div>
   <button id="padBtn" title="Mostrar/ocultar botões na tela" aria-label="botões na tela">🎮</button>
   <button id="musBtn" title="Música" aria-label="ligar ou desligar música">🔊</button>
   <div id="err" role="alert"></div>
   <div id="msg"></div>
-  <div id="touch">
-    <button class="tb" id="tL" data-k="arrowleft" aria-label="esquerda">◀</button>
-    <button class="tb" id="tR" data-k="arrowright" aria-label="direita">▶</button>
-    <button class="tb" id="tX" data-k="x" aria-label="agir">X</button>
-    <button class="tb" id="tZ" data-k="z" aria-label="coco">🥥</button>
-    <button class="tb" id="tJ" data-k="arrowup" aria-label="pular / subir">⬆</button>
-    <button class="tb" id="tC" data-k="c" aria-label="trocar herói">🔄</button>
-  </div>
   <div id="overlay">
     <h1>Jogo da Juju</h1>
     <p id="ovText">Episódio 1 — Ilha dos Náufragos. Dois amigos naufragaram numa ilha. Dizem que há um tesouro enterrado do outro lado… Vamos achar?</p>
     <p id="ctrlHelp"><kbd>← →</kbd> andar &nbsp; <kbd>↑</kbd> ou <kbd>espaço</kbd> pular &nbsp; <kbd>Z</kbd> jogar coco &nbsp; <kbd>X</kbd> agir / cavar / espada &nbsp; <kbd>C</kbd> trocar herói &nbsp; <kbd>↑ ↓</kbd> na corda sobe e desce</p>
     <button id="startBtn">Começar aventura</button>
     <button id="l2Btn" class="small">Ir direto ao navio pirata (episódio 2)</button>
+  </div>
+ </div>
+  <div id="touch">
+    <div class="grp">
+      <button class="tb" id="tL" data-k="arrowleft" aria-label="esquerda">◀</button>
+      <button class="tb" id="tR" data-k="arrowright" aria-label="direita">▶</button>
+      <button class="tb" id="tC" data-k="c" aria-label="trocar herói">🔄</button>
+    </div>
+    <div class="grp">
+      <button class="tb" id="tZ" data-k="z" aria-label="coco">🥥</button>
+      <button class="tb" id="tX" data-k="x" aria-label="agir">X</button>
+      <button class="tb" id="tJ" data-k="arrowup" aria-label="pular / subir">⬆</button>
+    </div>
   </div>
 </div>
 <script>
@@ -230,8 +239,7 @@ function startGame(){ overlay.classList.add('hidden'); cut=null; reset(); wrap.f
 document.getElementById('startBtn').onclick=()=>{ LEVEL=1; startGame(); };
 document.getElementById('l2Btn').onclick=()=>{ LEVEL=2; startGame(); };
 wrap.addEventListener('pointerdown',()=>wrap.focus());
-document.getElementById('padBtn').onclick=e=>{ e.stopPropagation(); touchUI.classList.toggle('on'); wrap.focus(); };
-
+document.getElementById('padBtn').onclick=e=>{ e.stopPropagation(); touchUI.classList.toggle('on'); layout(); wrap.focus(); };
 // ---------- Música: bossa nova gerada em tempo real (Web Audio) ----------
 const MUSIC={on:true,ac:null,master:null,next:0,step:0,timer:null,bpm:112};
 // progressão original em 8 compassos (graus em semitons a partir de C), [raiz, notas do acorde]
@@ -319,6 +327,17 @@ function sfx(notes,vol=0.1,dur=0.5){ if(!MUSIC.ac||!MUSIC.on) return; const t=MU
 const touchUI=document.getElementById('touch');
 const isTouch = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
 if(isTouch){ touchUI.classList.add('on'); document.getElementById('ctrlHelp').textContent='Use os botões na tela: setas pra andar, ⬆ pula, 🥥 joga coco, X age e cava, 🔄 troca de herói.'; }
+// dimensiona o palco (16:9) pra sobrar espaço pra faixa de botões embaixo
+const stage=document.getElementById('stage');
+function layout(){
+  const on=touchUI.classList.contains('on');
+  const padH = on ? Math.round(Math.min(150, Math.max(84, innerHeight*0.22))) : 0;
+  const availH = innerHeight - padH - (on?16:0);
+  const w = Math.floor(Math.min(innerWidth, 1100, availH*16/9));
+  stage.style.width = w+'px'; wrap.style.width = w+'px'; touchUI.style.height = padH+'px';
+}
+addEventListener('resize',layout); addEventListener('orientationchange',()=>setTimeout(layout,150)); layout();
+
 for(const b of touchUI.querySelectorAll('.tb')){
   const k=b.dataset.k;
   const dn=e=>{ e.preventDefault(); keys[k]=true; b.classList.add('down'); };

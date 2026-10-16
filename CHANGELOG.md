@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.2.3
+- Controles de toque saem de cima do jogo: ficam numa faixa abaixo da tela (celular e tablet). O palco encolhe pra caber.
+
 ## 0.2.2
 - Caranguejos de porão no convés do navio (dois), usando `assets/ep2/caranguejo_sheet.png`.
 
