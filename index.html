@@ -88,7 +88,8 @@ const CFG = {
     helper1:{ file:"assets/ep1/ajudante_sheet.png", cols:6, rows:8, frames:{idle:2, walk:6, jump:6, arms:6}, fps:8 }, // Side do episódio 1 (ilha)
     helper2:{ file:"assets/ep2/ajudante_sheet.png", cols:6, rows:8, frames:{idle:2, walk:6, jump:6, arms:6}, fps:8 }, // Side do episódio 2 (navio)
     // caranguejo: 6 linhas — 0 parado frente, 1 andando frente, 2 garras frente, 3 parado costas, 4 andando costas, 5 garras costas (quadros 512×512)
-    crab:{ file:"assets/ep1/caranguejo_sheet.png", cols:6, rows:6, frames:{idle:2, walk:6, claws:6, idleBack:2, walkBack:6, clawsBack:6}, fps:8, height:95, foot:70 },
+    crab1:{ file:"assets/ep1/caranguejo_sheet.png", cols:6, rows:6, frames:{idle:2, walk:6, claws:6, idleBack:2, walkBack:6, clawsBack:6}, fps:8, height:95, foot:70 },
+    crab2:{ file:"assets/ep2/caranguejo_sheet.png", cols:6, rows:6, frames:{idle:2, walk:6, claws:6, idleBack:2, walkBack:6, clawsBack:6}, fps:8, height:95, foot:70 }, // caranguejo de porão (navio)
     // piratas da fase 2 (opcionais): mesmo esquema dos heróis — linhas: parado, andando, pulando (usada quando tonto), braços (jogando barril); 4 linhas olhando pra DIREITA (o jogo espelha) ou 8 linhas
     pirate:{ file:"assets/ep2/pirata_sheet.png", cols:6, rows:4, frames:{idle:2, walk:6, jump:6, arms:6}, fps:8, height:150, foot:22 },
     captain:{ file:"assets/ep2/capitao_sheet.png", cols:6, rows:4, frames:{idle:2, walk:6, jump:6, arms:6}, fps:8, height:220, foot:22 },
@@ -106,7 +107,7 @@ const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const IMG={};
 for(const k of ['heroA','heroB','helper1','helper2']){ const im=new Image(); im.onload=()=>{IMG[k]=im;}; im.onerror=()=>{}; im.src=CFG.sprites[k]; }
 const SHEET={};
-for(const k of ['heroA','heroB','helper1','helper2','crab','pirate','captain']){ const im=new Image(); im.onload=()=>{SHEET[k]=im;}; im.onerror=()=>{}; im.src=CFG.sheets[k].file; }
+for(const k of ['heroA','heroB','helper1','helper2','crab1','crab2','pirate','captain']){ const im=new Image(); im.onload=()=>{SHEET[k]=im;}; im.onerror=()=>{}; im.src=CFG.sheets[k].file; }
 
 // ---------- Mundo ----------
 let LEVEL=1, LEVEL_W=7000;
@@ -165,7 +166,8 @@ function buildLevel2(){
     {x:4900,y:450,w:140,h:24},{x:5400,y:450,w:140,h:24},
   ];
   hatches=[{x:1600,w:160},{x:2500,w:160},{x:3500,w:160}]; water=hatches;
-  planks=[]; crabs=[];
+  planks=[];
+  crabs=[{x:1000,min:720,max:1520,dir:1,stun:0,flee:0},{x:4000,min:3720,max:4520,dir:-1,stun:0,flee:0}]; // caranguejos de porão passeando no convés
   coconuts=[{x:620,y:560},{x:680,y:560},{x:740,y:560},{x:2800,y:560},{x:2860,y:560},{x:3880,y:160},{x:3930,y:160},{x:4600,y:560},{x:4660,y:560},{x:4720,y:560}];
   ropes=[{x:1905,top:170,bottom:GROUND},{x:3905,top:170,bottom:GROUND}];
   throwers=[{x:1375,y:400,face:-1,timer:50,armsT:0},{x:3275,y:400,face:-1,timer:50,armsT:0}];
@@ -836,8 +838,9 @@ function draw1(){
   // caranguejos
   const CROW={idle:0,walk:1,claws:2,idleBack:3,walkBack:4,clawsBack:5};
   for(const c of crabs){
-    if(SHEET.crab){
-      const sh=SHEET.crab, cfg=CFG.sheets.crab, fw=sh.width/cfg.cols, fh=sh.height/cfg.rows, hh=cfg.height, ww=hh*fw/fh;
+    const CK='crab'+LEVEL;
+    if(SHEET[CK]){
+      const sh=SHEET[CK], cfg=CFG.sheets[CK], fw=sh.width/cfg.cols, fh=sh.height/cfg.rows, hh=cfg.height, ww=hh*fw/fh;
       const heroNear = active && Math.abs(active.x+active.w/2-c.x)<140 && active.y+active.h>GROUND-60;
       const anim = c.stun>0 ? 'idleBack' : (c.flee>0 ? 'walkBack' : (heroNear ? 'claws' : 'walk'));
       const n=cfg.frames[anim], fi=c.stun>0?(Math.floor(c.stun/8)%n):Math.floor(Date.now()/(1000/(c.flee>0?cfg.fps*2:cfg.fps)))%n;

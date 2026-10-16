@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.2.2
+- Caranguejos de porão no convés do navio (dois), usando `assets/ep2/caranguejo_sheet.png`.
+
 ## 0.2.1
 - Ajudante passa a se chamar **Side** em todas as fases, com um personagem diferente por episódio.
 - Imagens reorganizadas por episódio: `assets/ep1/`, `assets/ep2/`; heróis continuam em `assets/`.

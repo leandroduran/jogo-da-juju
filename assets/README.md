@@ -11,6 +11,7 @@ assets/
 │   └── caranguejo_sheet.png
 └── ep2/                  Episódio 2 — O Navio Pirata
     ├── ajudante_sheet.png   o Side desta fase (outro personagem, mesmo nome)
+    ├── caranguejo_sheet.png caranguejo de porão
     ├── pirata_sheet.png
     └── capitao_sheet.png
 ```
