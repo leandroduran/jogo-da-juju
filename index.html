@@ -728,6 +728,28 @@ function drawHero(h,isActive){
   drawShovel(h,x+h.w/2,y+h.h,120); drawSword(h,x+h.w/2,y+h.h,120);
   if(isActive){ ctx.fillStyle="#fff"; ctx.beginPath(); ctx.moveTo(x+h.w/2-8,y-128); ctx.lineTo(x+h.w/2+8,y-128); ctx.lineTo(x+h.w/2,y-118); ctx.fill(); }
 }
+function drawCrabs(){
+  const CROW={idle:0,walk:1,claws:2,idleBack:3,walkBack:4,clawsBack:5};
+  for(const c of crabs){
+    const CK='crab'+LEVEL;
+    if(SHEET[CK]){
+      const sh=SHEET[CK], cfg=CFG.sheets[CK], fw=sh.width/cfg.cols, fh=sh.height/cfg.rows, hh=cfg.height, ww=hh*fw/fh;
+      const heroNear = active && Math.abs(active.x+active.w/2-c.x)<140 && active.y+active.h>GROUND-60;
+      const anim = c.stun>0 ? 'idleBack' : (c.flee>0 ? 'walkBack' : (heroNear ? 'claws' : 'walk'));
+      const n=cfg.frames[anim], fi=c.stun>0?(Math.floor(c.stun/8)%n):Math.floor(Date.now()/(1000/(c.flee>0?cfg.fps*2:cfg.fps)))%n;
+      ctx.save(); ctx.translate(c.x,GROUND); ctx.scale(c.dir,1);
+      if(c.stun>0){ ctx.translate(0,-hh*0.3); ctx.rotate(Math.PI); ctx.translate(0,-hh*0.3); ctx.globalAlpha=0.9; }
+      ctx.drawImage(sh, fi*fw, CROW[anim]*fh, fw, fh, -ww/2, -hh+cfg.foot*hh/fh, ww, hh);
+      ctx.restore(); continue;
+    }
+    ctx.save(); ctx.translate(c.x,GROUND-14); if(c.stun>0) ctx.rotate(Math.PI); if(c.flee>0){ ctx.scale(1,0.9); ctx.translate(0,Math.abs(Math.sin(Date.now()/60))*-4); }
+    ctx.fillStyle=c.stun>0?"#ffb0b0":"#ff5e5e"; ctx.beginPath(); ctx.ellipse(0,0,28,16,0,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle=c.stun>0?"#ffb0b0":"#ff5e5e"; ctx.lineWidth=5;
+    for(let i=-1;i<=1;i+=2){ ctx.beginPath(); ctx.moveTo(i*20,5); ctx.lineTo(i*34,14+Math.sin(Date.now()/100)*4); ctx.stroke(); ctx.beginPath(); ctx.moveTo(i*24,-6); ctx.lineTo(i*40,-18); ctx.stroke(); ctx.beginPath(); ctx.arc(i*42,-22,8,0,Math.PI*2); ctx.stroke(); }
+    ctx.fillStyle="#fff"; ctx.beginPath(); ctx.arc(-8,-10,5,0,Math.PI*2); ctx.arc(8,-10,5,0,Math.PI*2); ctx.fill(); ctx.fillStyle="#222"; ctx.beginPath(); ctx.arc(-8,-10,2,0,Math.PI*2); ctx.arc(8,-10,2,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+}
 function rr(x,y,w,h,r){ ctx.beginPath(); if(ctx.roundRect){ ctx.roundRect(x,y,w,h,r); return; } r=Math.min(r,w/2,h/2); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
 
 function drawBird(){
@@ -835,27 +857,7 @@ function draw1(){
   for(const p of planks) if(!p.got){ ctx.save(); ctx.translate(p.x,p.y+Math.sin(Date.now()/400)*4); ctx.rotate(-0.3); ctx.fillStyle="#c58d4b"; rr(-26,-7,52,14,4); ctx.fill(); ctx.restore(); }
   for(const c of coconuts) if(!c.got){ ctx.fillStyle="#6b3e1c"; ctx.beginPath(); ctx.arc(c.x,c.y+Math.sin(Date.now()/350+c.x)*3,14,0,Math.PI*2); ctx.fill(); ctx.fillStyle="#3a2210"; ctx.beginPath(); ctx.arc(c.x-4,c.y-4,2,0,Math.PI*2); ctx.arc(c.x+4,c.y-4,2,0,Math.PI*2); ctx.fill(); }
   for(const s of shots){ ctx.fillStyle="#6b3e1c"; ctx.beginPath(); ctx.arc(s.x,s.y,11,0,Math.PI*2); ctx.fill(); }
-  // caranguejos
-  const CROW={idle:0,walk:1,claws:2,idleBack:3,walkBack:4,clawsBack:5};
-  for(const c of crabs){
-    const CK='crab'+LEVEL;
-    if(SHEET[CK]){
-      const sh=SHEET[CK], cfg=CFG.sheets[CK], fw=sh.width/cfg.cols, fh=sh.height/cfg.rows, hh=cfg.height, ww=hh*fw/fh;
-      const heroNear = active && Math.abs(active.x+active.w/2-c.x)<140 && active.y+active.h>GROUND-60;
-      const anim = c.stun>0 ? 'idleBack' : (c.flee>0 ? 'walkBack' : (heroNear ? 'claws' : 'walk'));
-      const n=cfg.frames[anim], fi=c.stun>0?(Math.floor(c.stun/8)%n):Math.floor(Date.now()/(1000/(c.flee>0?cfg.fps*2:cfg.fps)))%n;
-      ctx.save(); ctx.translate(c.x,GROUND); ctx.scale(c.dir,1);
-      if(c.stun>0){ ctx.translate(0,-hh*0.3); ctx.rotate(Math.PI); ctx.translate(0,-hh*0.3); ctx.globalAlpha=0.9; }
-      ctx.drawImage(sh, fi*fw, CROW[anim]*fh, fw, fh, -ww/2, -hh+cfg.foot*hh/fh, ww, hh);
-      ctx.restore(); continue;
-    }
-    ctx.save(); ctx.translate(c.x,GROUND-14); if(c.stun>0) ctx.rotate(Math.PI); if(c.flee>0){ ctx.scale(1,0.9); ctx.translate(0,Math.abs(Math.sin(Date.now()/60))*-4); }
-    ctx.fillStyle=c.stun>0?"#ffb0b0":"#ff5e5e"; ctx.beginPath(); ctx.ellipse(0,0,28,16,0,0,Math.PI*2); ctx.fill();
-    ctx.strokeStyle=c.stun>0?"#ffb0b0":"#ff5e5e"; ctx.lineWidth=5;
-    for(let i=-1;i<=1;i+=2){ ctx.beginPath(); ctx.moveTo(i*20,5); ctx.lineTo(i*34,14+Math.sin(Date.now()/100)*4); ctx.stroke(); ctx.beginPath(); ctx.moveTo(i*24,-6); ctx.lineTo(i*40,-18); ctx.stroke(); ctx.beginPath(); ctx.arc(i*42,-22,8,0,Math.PI*2); ctx.stroke(); }
-    ctx.fillStyle="#fff"; ctx.beginPath(); ctx.arc(-8,-10,5,0,Math.PI*2); ctx.arc(8,-10,5,0,Math.PI*2); ctx.fill(); ctx.fillStyle="#222"; ctx.beginPath(); ctx.arc(-8,-10,2,0,Math.PI*2); ctx.arc(8,-10,2,0,Math.PI*2); ctx.fill();
-    ctx.restore();
-  }
+  drawCrabs();
   // tesouro
   if(!treasure.found){ ctx.strokeStyle="#c0392b"; ctx.lineWidth=8; ctx.lineCap="round"; ctx.beginPath(); ctx.moveTo(treasure.x-24,GROUND-24); ctx.lineTo(treasure.x+24,GROUND+0); ctx.moveTo(treasure.x+24,GROUND-24); ctx.lineTo(treasure.x-24,GROUND+0); ctx.stroke();
     if(treasure.digs>0){ ctx.fillStyle="#b58d4a"; ctx.beginPath(); ctx.ellipse(treasure.x,GROUND+2,36+treasure.digs*4,10+treasure.digs*2,0,0,Math.PI*2); ctx.fill(); } }
@@ -979,6 +981,7 @@ function draw2(){
   for(const c of coconuts) if(!c.got){ ctx.fillStyle="#6b3e1c"; ctx.beginPath(); ctx.arc(c.x,c.y+Math.sin(Date.now()/350+c.x)*3,14,0,Math.PI*2); ctx.fill(); ctx.fillStyle="#3a2210"; ctx.beginPath(); ctx.arc(c.x-4,c.y-4,2,0,Math.PI*2); ctx.arc(c.x+4,c.y-4,2,0,Math.PI*2); ctx.fill(); }
   for(const s of shots){ ctx.fillStyle="#6b3e1c"; ctx.beginPath(); ctx.arc(s.x,s.y,11,0,Math.PI*2); ctx.fill(); }
   for(const b of barrels) drawBarrel(b.x,b.y,b.r,b.rot);
+  drawCrabs();
   // capangas
   for(const th of throwers) drawPirate(th.x,th.y,th.face,0.85,th.armsT,0,false,false);
   // capitão
