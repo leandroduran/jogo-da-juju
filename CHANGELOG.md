@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.4
+- Pulo mais longo (alcance ~270 px) e tolerante: vale apertar um pouco antes ou um pouco depois da beirada.
+- O herói que vem atrás pula junto com o líder e também pula sozinho ao ver um buraco à frente.
+- Troca de líder só acontece com os dois no chão e próximos; ponto de troca da ilha afastado do primeiro lago.
+
 ## 0.2.3
 - Tablet: controles de toque numa faixa abaixo da tela. Celular deitado: botões translúcidos nos cantos, menores, sem encolher o jogo.
 - Modo app: ao "Adicionar à Tela de Início" no iPhone/iPad, abre em tela cheia, deitado, com ícone próprio (`assets/icon.png`).

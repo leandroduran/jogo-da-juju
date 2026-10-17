@@ -91,7 +91,7 @@ const CFG = {
   heroA: { name: "Juju", color: "#3b8fe6", dark:"#2660a8", belly:"#dff0ff", type:"jumper" }, // herói 1
   heroB: { name: "Papai", color: "#9b5de5", dark:"#6a3bb0", belly:"#f1e4ff", type:"thrower" }, // herói 2
   helper:{ name: "Side", color: "#ffd23f", dark:"#d49a00" }, // o Side: nome igual em todas as fases, personagem diferente em cada uma (imagens em assets/epN/)
-  speed: 4.2, gravity: 0.6, jumpA: -14.5, jumpB: -14.5, // os dois pulam igual e jogam coco igual; a liderança alterna nos pontos da fase e com a tecla C
+  speed: 4.4, gravity: 0.5, jumpA: -15.5, jumpB: -15.5, coyote: 9, jumpBuffer: 9, // pulo longo e tolerante: pode apertar um pouco antes ou um pouco depois da beirada // os dois pulam igual e jogam coco igual; a liderança alterna nos pontos da fase e com a tecla C
   // Imagens opcionais: coloque PNGs com estes nomes na pasta assets/ ao lado do index.html
   // (fundo transparente, personagem olhando para a DIREITA). Se não existirem, usa o desenho padrão.
   sprites: { heroA:"assets/heroi1.png", heroB:"assets/heroi2.png", helper1:"assets/ep1/ajudante.png", helper2:"assets/ep2/ajudante.png", heightA:200, heightB:200, heightHelper:150,
@@ -161,7 +161,7 @@ function buildLevel1(){
   gates = [ // pontos onde a liderança troca automaticamente (quem estava atrás passa pra frente)
     {x:560,  text:"Hora de pular alto!"},
     {x:880,  text:"Caranguejo à vista! Joga um coco nele."},
-    {x:1400, text:"Pula o laguinho!"},
+    {x:1250, text:"Pula o laguinho!"},
     {x:1850, text:"Pega a tábua lá em cima!"},
     {x:3150, text:"Mais caranguejos. Mira bem!"},
     {x:4100, text:"Falta pouco, vamos!"},
@@ -206,7 +206,7 @@ function buildLevel2(){
 }
 
 // ---------- Personagens ----------
-function makeHero(def){ return {def, x:0,y:0,vx:0,vy:0,w:44,h:60,onGround:false,face:1,walk:0,throwCd:0,armsT:0,armsMax:24,digT:0,climb:false,swingT:0,swingHit:false,hurt:0}; }
+function makeHero(def){ return {def, x:0,y:0,vx:0,vy:0,w:44,h:60,onGround:false,face:1,walk:0,throwCd:0,armsT:0,armsMax:24,digT:0,climb:false,swingT:0,swingHit:false,hurt:0,coyote:0,jbuf:0,syncJump:0}; }
 let heroes, active, follower, cam=0, keys={}, msgTimer=0, items, state, shots=[], particles=[], bird;
 
 function reset(){
@@ -392,14 +392,21 @@ function stepHero(h,ctrl){
     if(L()){h.vx=-sp;h.face=-1;} else if(R()){h.vx=sp;h.face=1;} else h.vx*=0.6;
     if(rope && J()&&!jHeld && !(U()&&h.y+h.h<=rope.top+32)){ h.climb=true; h.x=rope.x-h.w/2; h.vx=0; h.vy=0; h.onGround=false; burst(h.x+h.w/2,h.y+h.h/2,"#e8c98a",6); jHeld=true; return; }
     if(rope && D() && h.y+h.h<rope.bottom-4){ h.climb=true; h.x=rope.x-h.w/2; h.vx=0; h.vy=0; h.onGround=false; return; }
-    if(J()&&!jHeld&&h.onGround){ h.vy = h.def.type==="jumper"?CFG.jumpA:CFG.jumpB; h.onGround=false; burst(h.x+h.w/2,h.y+h.h,"#f1d9a0",6); }
+    // coyote: ainda pode pular alguns quadros depois de sair da beirada; buffer: aperto um pouco antes de pousar vale
+    if(h.onGround) h.coyote=CFG.coyote; else if(h.coyote>0) h.coyote--;
+    if(J()&&!jHeld) h.jbuf=CFG.jumpBuffer; else if(h.jbuf>0) h.jbuf--;
+    if(h.jbuf>0 && h.coyote>0){ h.vy = h.def.type==="jumper"?CFG.jumpA:CFG.jumpB; h.onGround=false; h.coyote=0; h.jbuf=0; burst(h.x+h.w/2,h.y+h.h,"#f1d9a0",6); follower.syncJump=7; }
     jHeld=J();
   } else {
     // seguidor: anda até ficar atrás do líder
     const target = active.x - 70*active.face;
     const d = target-h.x;
     if(Math.abs(d)>12){ h.vx=Math.sign(d)*CFG.speed*0.95; h.face=Math.sign(d); } else h.vx*=0.5;
-    if(h.onGround && (Math.abs(d)>160 || (active.y<h.y-40 && Math.abs(d)<200))){ h.vy=CFG.jumpA; h.onGround=false; }
+    // pula junto com o líder (com um atraso curto, pra parecer que vai atrás) e pula sozinho ao ver um buraco à frente
+    if(h.syncJump>0){ h.syncJump--; if(h.syncJump===0 && h.onGround && Math.abs(d)<260){ h.vy=CFG.jumpA; h.onGround=false; burst(h.x+h.w/2,h.y+h.h,"#f1d9a0",5); } }
+    const ahead = h.x + (h.vx>0?h.w+34:-34);
+    const holeAhead = h.onGround && Math.abs(h.vx)>1 && [0,40,80,120,160].every(dy=>!groundAt(ahead-h.w/2,h.w,h.y+dy,h.h));
+    if(h.onGround && (holeAhead || Math.abs(d)>170 || (active.y<h.y-40 && Math.abs(d)<200))){ h.vy=CFG.jumpA; h.onGround=false; }
     if(Math.abs(d)>600 || (active.y<h.y-130 && Math.abs(d)<450 && active.onGround)){ h.x=active.x-60*active.face; h.y=active.y; h.vy=0; burst(h.x+h.w/2,h.y+h.h/2,"#fff",8); }
   }
   h.vy+=CFG.gravity; if(h.vy>18)h.vy=18;
@@ -458,7 +465,7 @@ function update(){
   for(const cp of checkpoints) if(active.x>cp && cp>lastCheckpoint) lastCheckpoint=cp;
 
   // portões de troca
-  for(const g of gates){ if(!g.done && active.x>g.x){ g.done=true; swapTo('other',g.text); } }
+  for(const g of gates){ if(!g.done && active.x>g.x && active.onGround && follower.onGround && Math.abs(active.x-follower.x)<220){ g.done=true; swapTo('other',g.text); } }
 
   // coletar
   const hx=active.x+active.w/2, hy=active.y+active.h/2;
