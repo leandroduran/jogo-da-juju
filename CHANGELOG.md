@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.3.5
+- Folha do tatu lida pelas faixas reais de cada linha (`rowY`) e, nas linhas de enrolar, pelos recortes reais de cada quadro (`colX`) — some o vazamento da linha de baixo e dos vizinhos. Linhas: 0 parado dir., 1 anda dir., 2 enrola dir., 3 enrola esq., 4 anda esq.
+
 ## 0.3.4
 - Tatu-bola lê folhas com linhas separadas por lado (`layout:'lr'` em `CFG.sheets.crab3`): parado/andando/enrolar à direita, andando/enrolar à esquerda. Enrola uma vez ao ser acertado, segura e desenrola antes de fugir.
 

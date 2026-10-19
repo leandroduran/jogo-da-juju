@@ -120,7 +120,10 @@ const CFG = {
     crab1:{ file:"assets/ep1/caranguejo_sheet.png", cols:6, rows:6, frames:{idle:2, walk:6, claws:6, idleBack:2, walkBack:6, clawsBack:6}, fps:8, height:95, foot:70 },
     crab2:{ file:"assets/ep2/caranguejo_sheet.png", cols:6, rows:6, frames:{idle:2, walk:6, claws:6, idleBack:2, walkBack:6, clawsBack:6}, fps:8, height:95, foot:70 }, // caranguejo de porão (navio)
     // tatu-bola: folha com linhas por lado (sem espelhar). rowsLR = número da linha de cada animação; 'curl' = enrolar (toca uma vez, segura, e desenrola no fim)
-    crab3:{ file:"assets/ep3/tatu_sheet.png", cols:6, rows:6, layout:'lr', rowsLR:{ idleR:0, walkR:1, curlR:2, idleL:3, walkL:3, curlL:4 }, frames:{idle:6, walk:6, curl:6, idleL:1}, fps:8, height:95, foot:30 },
+    crab3:{ file:"assets/ep3/tatu_sheet.png", cols:6, rows:6, layout:'lr', rowsLR:{ idleR:0, walkR:1, curlR:2, curlL:3, idleL:4, walkL:4 }, frames:{idle:1, walk:6, curl:6, idleL:1}, fps:8, height:100, foot:0,
+      // a arte não está alinhada na grade de 209 px: estas são as faixas reais de cada linha (y inicial, y final) e, nas linhas de enrolar, os recortes reais de cada quadro (x inicial, x final)
+      rowY:[[51,216],[239,404],[451,626],[647,820],[840,1005]],
+      colX:{ 2:[[4,236],[241,430],[436,630],[645,833],[851,1030],[1050,1230]], 3:[[26,221],[222,425],[442,615],[638,816],[839,1018],[1047,1231]] } },
     // piratas da fase 2 (opcionais): mesmo esquema dos heróis — linhas: parado, andando, pulando (usada quando tonto), braços (jogando barril); 4 linhas olhando pra DIREITA (o jogo espelha) ou 8 linhas
     pirate:{ file:"assets/ep2/pirata_sheet.png", cols:6, rows:4, frames:{idle:2, walk:6, jump:6, arms:6}, fps:8, height:150, foot:22 },
     captain:{ file:"assets/ep2/capitao_sheet.png", cols:6, rows:4, frames:{idle:2, walk:6, jump:6, arms:6}, fps:8, height:220, foot:22 },
@@ -920,8 +923,14 @@ function drawCrabs(){
         fi = el<n*6 ? Math.floor(el/6) : (c.stun<n*6 ? Math.floor(c.stun/6) : n-1); }       // enrola, segura, desenrola
       else { const walking=true; row = walking ? (right?cfg.rowsLR.walkR:cfg.rowsLR.walkL) : (right?cfg.rowsLR.idleR:cfg.rowsLR.idleL);
         const n = walking ? cfg.frames.walk : (right?cfg.frames.idle:(cfg.frames.idleL||cfg.frames.idle)); fi=Math.floor(Date.now()/(1000/(c.flee>0?cfg.fps*2:cfg.fps)))%n; }
-      if(c.stun>0){ ctx.save(); ctx.translate(c.x,GROUND-hh*0.35); ctx.rotate(Math.sin(c.stun/6)*0.15); ctx.translate(-c.x,-(GROUND-hh*0.35)); }
-      ctx.drawImage(sh, fi*fw, row*fh, fw, fh, c.x-ww/2, GROUND-hh+cfg.foot*hh/fh, ww, hh);
+      // recorte real do quadro (faixas medidas) ou célula uniforme
+      let sx=fi*fw, sy=row*fh, sw=fw, shh=fh;
+      if(cfg.rowY&&cfg.rowY[row]){ sy=cfg.rowY[row][0]; shh=cfg.rowY[row][1]-sy; }
+      if(cfg.colX&&cfg.colX[row]&&cfg.colX[row][fi]){ sx=cfg.colX[row][fi][0]; sw=cfg.colX[row][fi][1]-sx; }
+      else { sx+=4; sw-=8; } // apara 4 px de cada lado pra não pegar o rabo do vizinho
+      const sc=hh/fh, dw=sw*sc, dh=shh*sc;
+      if(c.stun>0){ ctx.save(); ctx.translate(c.x,GROUND-dh*0.45); ctx.rotate(Math.sin(c.stun/6)*0.15); ctx.translate(-c.x,-(GROUND-dh*0.45)); }
+      ctx.drawImage(sh, sx, sy, sw, shh, c.x-dw/2, GROUND-dh+cfg.foot*sc, dw, dh);
       if(c.stun>0) ctx.restore();
       continue;
     }
