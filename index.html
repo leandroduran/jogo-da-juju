@@ -70,6 +70,7 @@
     <p id="ctrlHelp"><kbd>← →</kbd> andar &nbsp; <kbd>↑</kbd> ou <kbd>espaço</kbd> pular &nbsp; <kbd>Z</kbd> jogar coco &nbsp; <kbd>X</kbd> agir / cavar / espada &nbsp; <kbd>C</kbd> trocar herói &nbsp; <kbd>↑ ↓</kbd> na corda sobe e desce</p>
     <button id="startBtn">Começar aventura</button>
     <button id="l2Btn" class="small">Ir direto ao navio pirata (episódio 2)</button>
+    <button id="l3Btn" class="small">Ir direto à floresta (episódio 3)</button>
   </div>
  </div>
   <div id="touch">
@@ -90,11 +91,15 @@
 const CFG = {
   heroA: { name: "Juju", color: "#3b8fe6", dark:"#2660a8", belly:"#dff0ff", type:"jumper" }, // herói 1
   heroB: { name: "Papai", color: "#9b5de5", dark:"#6a3bb0", belly:"#f1e4ff", type:"thrower" }, // herói 2
+  heroC: { name: "Herói 3", color: "#3fae5a", dark:"#237a3a", belly:"#e3ffe8", type:"listener" }, // herói 3 (só no episódio 3) — TROQUE O NOME AQUI
+  // habilidades da floresta (episódio 3): qual herói resolve cada desafio
+  skills: { strength:"thrower", vines:"jumper", hearing:"listener" }, // força = Papai, cipós = Juju, ouvido = Herói 3
+  worm: { name: "Sherman", offsetY: 38 }, // a minhoca que vai na cabeça de quem lidera; offsetY = altura acima do boneco (ajuste se usar sprites altos)
   helper:{ name: "Side", color: "#ffd23f", dark:"#d49a00" }, // o Side: nome igual em todas as fases, personagem diferente em cada uma (imagens em assets/epN/)
   speed: 4.4, gravity: 0.5, jumpA: -15.5, jumpB: -15.5, coyote: 9, jumpBuffer: 9, // pulo longo e tolerante: pode apertar um pouco antes ou um pouco depois da beirada // os dois pulam igual e jogam coco igual; a liderança alterna nos pontos da fase e com a tecla C
   // Imagens opcionais: coloque PNGs com estes nomes na pasta assets/ ao lado do index.html
   // (fundo transparente, personagem olhando para a DIREITA). Se não existirem, usa o desenho padrão.
-  sprites: { heroA:"assets/heroi1.png", heroB:"assets/heroi2.png", helper1:"assets/ep1/ajudante.png", helper2:"assets/ep2/ajudante.png", heightA:200, heightB:200, heightHelper:150,
+  sprites: { heroA:"assets/heroi1.png", heroB:"assets/heroi2.png", heroC:"assets/heroi3.png", helper1:"assets/ep1/ajudante.png", helper2:"assets/ep2/ajudante.png", helper3:"assets/ep3/ajudante.png", heightA:200, heightB:200, heightC:200, footC:22, heightHelper:150,
     // pixels de margem transparente ABAIXO dos pés em cada quadro (na escala original do PNG). Aumente se o personagem parecer flutuar.
     footA:22, footB:22, footHelper:22, shadow:false }, // altura em pixels na tela — aumente/diminua aqui
   helperOffset: 150, // distância da ajudante: positivo = vai à frente dos heróis, negativo = vem atrás
@@ -106,6 +111,9 @@ const CFG = {
   sheets: {
     heroA:{ file:"assets/heroi1_sheet.png", cols:6, rows:8, frames:{idle:2, walk:6, jump:6, arms:6}, fps:8 },
     heroB:{ file:"assets/heroi2_sheet.png", cols:6, rows:8, frames:{idle:2, walk:6, jump:6, arms:6}, fps:8 },
+    heroC:{ file:"assets/heroi3_sheet.png", cols:6, rows:8, frames:{idle:2, walk:6, jump:6, arms:6}, fps:8 },
+    helper3:{ file:"assets/ep3/ajudante_sheet.png", cols:6, rows:8, frames:{idle:2, walk:6, jump:6, arms:6}, fps:8 }, // Side do episódio 3 (a cientista)
+    worm:{ file:"assets/ep3/minhoca_sheet.png", cols:6, rows:4, frames:{idle:2, walk:6, jump:6, arms:6}, fps:6, height:70, foot:10 }, // Sherman (opcional): usa "idle" no ombro, "jump" na alegria do final
     helper1:{ file:"assets/ep1/ajudante_sheet.png", cols:6, rows:8, frames:{idle:2, walk:6, jump:6, arms:6}, fps:8 }, // Side do episódio 1 (ilha)
     helper2:{ file:"assets/ep2/ajudante_sheet.png", cols:6, rows:8, frames:{idle:2, walk:6, jump:6, arms:6}, fps:8 }, // Side do episódio 2 (navio)
     // caranguejo: 6 linhas — 0 parado frente, 1 andando frente, 2 garras frente, 3 parado costas, 4 andando costas, 5 garras costas (quadros 512×512)
@@ -126,18 +134,22 @@ const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 // ---------- Sprites opcionais ----------
 const IMG={};
-for(const k of ['heroA','heroB','helper1','helper2']){ const im=new Image(); im.onload=()=>{IMG[k]=im;}; im.onerror=()=>{}; im.src=CFG.sprites[k]; }
+for(const k of ['heroA','heroB','heroC','helper1','helper2','helper3']){ const im=new Image(); im.onload=()=>{IMG[k]=im;}; im.onerror=()=>{}; im.src=CFG.sprites[k]; }
 const SHEET={};
-for(const k of ['heroA','heroB','helper1','helper2','crab1','crab2','pirate','captain']){ const im=new Image(); im.onload=()=>{SHEET[k]=im;}; im.onerror=()=>{}; im.src=CFG.sheets[k].file; }
+for(const k of ['heroA','heroB','heroC','helper1','helper2','helper3','crab1','crab2','pirate','captain','worm']){ const im=new Image(); im.onload=()=>{SHEET[k]=im;}; im.onerror=()=>{}; im.src=CFG.sheets[k].file; }
 
 // ---------- Mundo ----------
 let LEVEL=1, LEVEL_W=7000;
 let solids, water, planks, coconuts, crabs, gates, bridge, vine, treasure, checkpoints;
 // elementos da fase 2 (navio pirata)
 let ropes=[], barrels=[], throwers=[], cage=null, swordChest=null, boss=null, wheel=null, hatches=[], cut=null, flagHero=false;
+// elementos da fase 3 (floresta)
+let boulder=null, vines3=[], listens=[], mushrooms=[], wormFamily=null, worm=null, forest=null;
 
 function buildLevel(){
+  boulder=null; vines3=[]; listens=[]; mushrooms=[]; wormFamily=null; forest=null;
   if(LEVEL===2){ buildLevel2(); return; }
+  if(LEVEL===3){ buildLevel3(); return; }
   LEVEL_W=7000; ropes=[]; barrels=[]; throwers=[]; cage=null; swordChest=null; boss=null; wheel=null; hatches=[]; flagHero=false;
   buildLevel1();
 }
@@ -171,6 +183,37 @@ function buildLevel1(){
   vine = {hookX:5500,hookY:260,startX:5240,endX:5740,active:false,t:0,cooldown:0,follow:false,ft:0};
   treasure = {x:6700,digs:0,need:6,found:false};
   checkpoints = [100, 1750, 2950, 4050, 5750];
+}
+
+// ===================== FASE 3: O CORAÇÃO DA FLORESTA =====================
+function buildLevel3(){
+  LEVEL_W=6600;
+  const nameOf=t=>[CFG.heroA,CFG.heroB,CFG.heroC].find(d=>d.type===t).name;
+  solids=[
+    {x:0,y:GROUND,w:1000,h:200},{x:1150,y:GROUND,w:500,h:200},{x:1810,y:GROUND,w:590,h:200},
+    {x:2580,y:GROUND,w:90,h:200},{x:2870,y:GROUND,w:90,h:200},                      // ilhotas da ravina
+    {x:3130,y:GROUND,w:770,h:200},{x:4060,y:GROUND,w:1140,h:200},{x:5370,y:GROUND,w:1300,h:200},
+    {x:700,y:470,w:140,h:24},{x:1250,y:460,w:140,h:24},
+    {x:3400,y:450,w:150,h:24},{x:3650,y:360,w:150,h:24},
+    {x:4700,y:470,w:140,h:24},{x:4950,y:380,w:140,h:24},{x:5500,y:470,w:150,h:24},
+  ];
+  water=[{x:1000,w:150},{x:1650,w:160},{x:2400,w:180},{x:2670,w:200},{x:2960,w:170},{x:3900,w:160},{x:5200,w:170}]; // lamaçais e ravina
+  planks=[]; crabs=[]; barrels=[];
+  coconuts=[{x:720,y:430},{x:770,y:430},{x:1290,y:420},{x:3450,y:410},{x:3700,y:320},{x:3750,y:320},{x:4750,y:430},{x:5000,y:340},{x:5550,y:430}];
+  mushrooms=[{x:3290,y:GROUND-40,w:90,h:20,sq:0,mush:true},{x:4480,y:GROUND-40,w:90,h:20,sq:0,mush:true},{x:5620,y:GROUND-40,w:90,h:20,sq:0,mush:true}];
+  solids.push(...mushrooms);
+  boulder={x:1440,w:150,pushes:0,need:4,gone:false,roll:0,pit:{x:1650,w:160},shake:0};
+  vines3=[{hookX:2475,hookY:380,startX:2340,endX:2610,done:false},{hookX:2745,hookY:380,startX:2610,endX:2880,done:false},{hookX:3015,hookY:380,startX:2880,endX:3150,done:false}];
+  listens=[{x:4150,wall:4300,done:false,t:0,kind:'wall'},{x:5950,wall:null,done:false,t:0,kind:'family'}];
+  wormFamily={x:6250,visible:false,t:0};
+  gates=[{x:600,to:CFG.skills.strength,text:`${nameOf(CFG.skills.strength)} na frente! Tem algo pesado logo ali.`},
+         {x:3350,to:CFG.skills.hearing,text:`Agora quem guia é ${nameOf(CFG.skills.hearing)}. Ouvidos atentos!`},
+         {x:4650,to:CFG.skills.vines,text:`${nameOf(CFG.skills.vines)} na frente até a clareira!`}];
+  bridge={x:-9999,w:0,built:false,need:3};
+  vine={hookX:-99999,hookY:380,startX:-99999,endX:-99999,active:false,t:0,cooldown:0,follow:false,ft:0,cur:null};
+  treasure={x:-99999,digs:0,need:6,found:true};
+  checkpoints=[100,1250,2200,3250,4100,4700,5500];
+  forest={fireflies:Array.from({length:26},(_,i)=>({x:(i*257)%LEVEL_W,y:120+(i*131)%380,p:i*0.7}))};
 }
 
 // ===================== FASE 2: O NAVIO PIRATA =====================
@@ -207,17 +250,19 @@ function buildLevel2(){
 
 // ---------- Personagens ----------
 function makeHero(def){ return {def, x:0,y:0,vx:0,vy:0,w:44,h:60,onGround:false,face:1,walk:0,throwCd:0,armsT:0,armsMax:24,digT:0,climb:false,swingT:0,swingHit:false,hurt:0,coyote:0,jbuf:0,syncJump:0}; }
-let heroes, active, follower, cam=0, keys={}, msgTimer=0, items, state, shots=[], particles=[], bird;
+let heroes, active, follower, followers=[], cam=0, keys={}, msgTimer=0, items, state, shots=[], particles=[], bird;
 
 function reset(){
   buildLevel();
-  heroes=[makeHero(CFG.heroA), makeHero(CFG.heroB)];
-  heroes[0].x=LEVEL===2?200:120; heroes[1].x=LEVEL===2?130:70; heroes.forEach(h=>h.y=GROUND-h.h);
-  active=heroes[0]; follower=heroes[1];
+  heroes=[makeHero(CFG.heroA), makeHero(CFG.heroB)]; if(LEVEL===3) heroes.push(makeHero(CFG.heroC));
+  heroes.forEach((h,i)=>{ h.x=(LEVEL===2?200:120)-i*55; h.y=GROUND-h.h; });
+  active=heroes[0]; followers=heroes.slice(1); follower=followers[0];
+  worm = LEVEL===3 ? {x:0,y:0,wig:0,free:false,hop:0} : null;
   cam=0; items={planks:0,coconuts:3,sword:false}; shots=[]; particles=[]; barrels=[];
   bird={x:LEVEL===2?cage.x+cage.w+700:active.x+140,y:GROUND,wing:0,armsT:0,vx:0,face:1,walking:false}; state="play"; lastCheckpoint=100;
   gates.forEach(g=>g.done=false);
-  if(LEVEL===2) say(`Os piratas trancaram ${CFG.heroA.name} e ${CFG.heroB.name} numa cela do navio!`,3500);
+  if(LEVEL===3) say(`${CFG.helper.name}: "Esse é o ${CFG.worm.name}. Ele se perdeu da família. Me ajudam a levar ele pro coração da floresta?"`,4200);
+  else if(LEVEL===2) say(`Os piratas trancaram ${CFG.heroA.name} e ${CFG.heroB.name} numa cela do navio!`,3500);
   else say(`${CFG.heroA.name} e ${CFG.heroB.name} chegaram à ilha. Sigam para a direita!`,3500);
 }
 let lastCheckpoint=100;
@@ -226,8 +271,9 @@ function say(t,ms=2600){ msgEl.textContent=t; msgEl.classList.add('show'); msgTi
 
 function swapTo(type,text){
   const h = type==='other' ? follower : heroes.find(h=>h.def.type===type);
-  if(h===active) return;
-  follower=active; active=h;
+  if(!h||h===active) return;
+  const prev=active; active=h;
+  followers=heroes.filter(x=>x!==active); followers.sort((a,b)=>(a===prev?-1:b===prev?1:0)); follower=followers[0];
   // quem assume aparece ao lado de quem estava guiando
   active.x=follower.x; active.y=follower.y-4; active.vx=0; active.vy=0;
   follower.x -= 60*follower.face;
@@ -243,13 +289,16 @@ let jHeld=false, zHeld=false, xHeld=false, cHeld=false;
 
 const wrap=document.getElementById('wrap');
 window.onerror=(m,s,l)=>{ const e=document.getElementById('err'); e.style.display='block'; e.textContent='Erro: '+m+' (linha '+l+')'; };
-function startGame(){ overlay.classList.add('hidden'); cut=null; reset(); wrap.focus(); startMusic();
-  const missing=['heroA','heroB','helper'+LEVEL].filter(k=>!IMG[k]&&!SHEET[k]).map(k=>CFG.sprites[k]+' ou '+CFG.sheets[k].file);
+let titleCard=null;
+const EP_NAMES={1:'Ilha dos Náufragos',2:'O Navio Pirata',3:'O Coração da Floresta'};
+function startGame(){ overlay.classList.add('hidden'); cut=null; reset(); titleCard={t:150,n:LEVEL,name:EP_NAMES[LEVEL]}; wrap.focus(); startMusic();
+  const missing=(LEVEL===3?['heroA','heroB','heroC','helper3']:['heroA','heroB','helper'+LEVEL]).filter(k=>!IMG[k]&&!SHEET[k]).map(k=>CFG.sprites[k]+' ou '+CFG.sheets[k].file);
   if(missing.length && missing.length<3) setTimeout(()=>say('Imagem não encontrada: '+missing.join(', ')+' (precisa estar na pasta assets/)',4000),3600);
   if(missing.length===3 && location.protocol==='file:') setTimeout(()=>say('Sem imagens na pasta — usando os desenhos padrão.',2500),3600);
 }
 document.getElementById('startBtn').onclick=()=>{ LEVEL=1; startGame(); };
 document.getElementById('l2Btn').onclick=()=>{ LEVEL=2; startGame(); };
+document.getElementById('l3Btn').onclick=()=>{ LEVEL=3; startGame(); };
 wrap.addEventListener('pointerdown',()=>wrap.focus());
 document.getElementById('padBtn').onclick=e=>{ e.stopPropagation(); touchUI.classList.toggle('on'); layout(); wrap.focus(); };
 // ---------- Música: bossa nova gerada em tempo real (Web Audio) ----------
@@ -317,11 +366,30 @@ function scheduleStep2(step,t){
   if(s===1||s===2||s===4||s===5) ch.notes.forEach((n,i)=>squeeze(t+i*0.005,f(n,3),eighth*0.8,0.035));
   const m=MELODY2[step%MELODY2.length]; if(m!==null){ let len=1; while(MELODY2[(step+len)%MELODY2.length]===null && len<6) len++; squeeze(t,f(m,4),eighth*len*0.9,0.07); }
 }
-function stepDur(){ return LEVEL===2 ? 60/140/2 : 60/MUSIC.bpm/4; }
+// ---- Fase 3: opereta original — baixo "oom", acordes "pah" em pizzicato e clarinete saltitante, dó maior ----
+const CHORDS3=[ {root:0,notes:[0,4,7]},{root:0,notes:[0,4,7]},{root:5,notes:[5,9,12]},{root:0,notes:[0,4,7]},
+                {root:7,notes:[7,11,14,17]},{root:7,notes:[7,11,14,17]},{root:0,notes:[0,4,7]},{root:7,notes:[7,11,14,17]} ]; // C C F C | G7 G7 C G7
+const MELODY3=[ 0,4,7,12,7,4,0,null,  2,5,7,11,7,5,2,null,  0,4,7,12,16,12,7,4,  5,9,12,17,12,9,5,null,
+                0,7,4,0,7,4,0,null,  2,7,5,2,11,7,5,2,  0,4,7,12,11,7,5,2,  0,null,null,null,12,null,null,null ];
+function clarinet(t,freq,dur,vol){
+  const ac=MUSIC.ac, o=ac.createOscillator(), g=ac.createGain(), lp=ac.createBiquadFilter(), v=ac.createOscillator(), vg=ac.createGain();
+  o.type='triangle'; o.frequency.value=freq; lp.type='lowpass'; lp.frequency.value=2200;
+  v.frequency.value=5.5; vg.gain.value=freq*0.006; v.connect(vg); vg.connect(o.frequency);
+  g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(vol,t+0.02); g.gain.setValueAtTime(vol,t+dur*0.75); g.gain.linearRampToValueAtTime(0,t+dur);
+  o.connect(lp); lp.connect(g); g.connect(MUSIC.master); o.start(t); v.start(t); o.stop(t+dur+0.02); v.stop(t+dur+0.02);
+}
+function scheduleStep3(step,t){
+  const bar=Math.floor(step/8)%CHORDS3.length, s8=step%8, ch=CHORDS3[bar], eighth=60/138/2;
+  if(s8===0||s8===4) bass(t,f(ch.root,2),eighth*1.6);
+  if(s8===2||s8===6) ch.notes.forEach((n,i)=>pluck(t+i*0.008,f(n,3),eighth*0.9,0.05,2600));
+  if(s8%2===0) tick(t,0.03,9000);
+  const m=MELODY3[step%MELODY3.length]; if(m!==null){ let len=1; while(MELODY3[(step+len)%MELODY3.length]===null && len<4) len++; clarinet(t,f(m,4),eighth*len*0.85,0.08); }
+}
+function stepDur(){ return LEVEL===2 ? 60/140/2 : LEVEL===3 ? 60/138/2 : 60/MUSIC.bpm/4; }
 function musicLoop(){
   if(!MUSIC.ac||!MUSIC.on) return;
   const ahead=0.25;
-  while(MUSIC.next<MUSIC.ac.currentTime+ahead){ if(LEVEL===2) scheduleStep2(MUSIC.step,MUSIC.next); else scheduleStep(MUSIC.step,MUSIC.next); MUSIC.step++; MUSIC.next+=stepDur(); }
+  while(MUSIC.next<MUSIC.ac.currentTime+ahead){ if(LEVEL===2) scheduleStep2(MUSIC.step,MUSIC.next); else if(LEVEL===3) scheduleStep3(MUSIC.step,MUSIC.next); else scheduleStep(MUSIC.step,MUSIC.next); MUSIC.step++; MUSIC.next+=stepDur(); }
   MUSIC.timer=setTimeout(musicLoop,60);
 }
 function startMusic(){
@@ -369,7 +437,7 @@ function groundAt(x,w,y,h){ // retorna sólido onde pousar
 }
 function inWater(x,w,y,h){ if(y+h<GROUND+20) return false; return water.some(wt=>x+w>wt.x && x<wt.x+wt.w && !(bridge.built && wt.x===bridge.x)); }
 
-function stepHero(h,ctrl){
+function stepHero(h,ctrl,leader=active){
   if(h.hurt>0)h.hurt--; if(h.swingT>0)h.swingT--; else h.swingHit=false;
   const rope = ctrl ? ropes.find(r=>Math.abs(h.x+h.w/2-r.x)<30 && h.y+h.h>r.top+20 && h.y+h.h<r.bottom+24) : null;
   if(ctrl && h.climb){
@@ -395,37 +463,41 @@ function stepHero(h,ctrl){
     // coyote: ainda pode pular alguns quadros depois de sair da beirada; buffer: aperto um pouco antes de pousar vale
     if(h.onGround) h.coyote=CFG.coyote; else if(h.coyote>0) h.coyote--;
     if(J()&&!jHeld) h.jbuf=CFG.jumpBuffer; else if(h.jbuf>0) h.jbuf--;
-    if(h.jbuf>0 && h.coyote>0){ h.vy = h.def.type==="jumper"?CFG.jumpA:CFG.jumpB; h.onGround=false; h.coyote=0; h.jbuf=0; burst(h.x+h.w/2,h.y+h.h,"#f1d9a0",6); follower.syncJump=7; }
+    if(h.jbuf>0 && h.coyote>0){ h.vy = h.def.type==="jumper"?CFG.jumpA:CFG.jumpB; h.onGround=false; h.coyote=0; h.jbuf=0; burst(h.x+h.w/2,h.y+h.h,"#f1d9a0",6); followers.forEach((f,i)=>f.syncJump=7+i*6); }
     jHeld=J();
   } else {
     // seguidor: anda até ficar atrás do líder
-    const target = active.x - 70*active.face;
+    const target = leader.x - 70*active.face;
     const d = target-h.x;
-    if(Math.abs(d)>12){ h.vx=Math.sign(d)*CFG.speed*0.95; h.face=Math.sign(d); } else h.vx*=0.5;
+    const targetOk = [0,40,80,120,160].some(dy=>groundAt(target,h.w,h.y+dy,h.h)) || Math.abs(d)>170; // não anda pra cima de um buraco só pra ficar atrás do líder
+    if(Math.abs(d)>12 && targetOk){ h.vx=Math.sign(d)*CFG.speed*0.95; h.face=Math.sign(d); } else h.vx*=0.5;
     // pula junto com o líder (com um atraso curto, pra parecer que vai atrás) e pula sozinho ao ver um buraco à frente
     if(h.syncJump>0){ h.syncJump--; if(h.syncJump===0 && h.onGround && Math.abs(d)<260){ h.vy=CFG.jumpA; h.onGround=false; burst(h.x+h.w/2,h.y+h.h,"#f1d9a0",5); } }
     const ahead = h.x + (h.vx>0?h.w+34:-34);
     const holeAhead = h.onGround && Math.abs(h.vx)>1 && [0,40,80,120,160].every(dy=>!groundAt(ahead-h.w/2,h.w,h.y+dy,h.h));
-    if(h.onGround && (holeAhead || Math.abs(d)>170 || (active.y<h.y-40 && Math.abs(d)<200))){ h.vy=CFG.jumpA; h.onGround=false; }
-    if(Math.abs(d)>600 || (active.y<h.y-130 && Math.abs(d)<450 && active.onGround)){ h.x=active.x-60*active.face; h.y=active.y; h.vy=0; burst(h.x+h.w/2,h.y+h.h/2,"#fff",8); }
+    if(h.onGround && (holeAhead || Math.abs(d)>170 || (leader.y<h.y-40 && Math.abs(d)<200))){ h.vy=CFG.jumpA; h.onGround=false; }
+    if(Math.abs(d)>600 || (leader.y<h.y-130 && Math.abs(d)<450 && leader.onGround)){ h.x=leader.x-60*active.face; h.y=leader.y; h.vy=0; burst(h.x+h.w/2,h.y+h.h/2,"#fff",8); }
   }
   h.vy+=CFG.gravity; if(h.vy>18)h.vy=18;
   h.x+=h.vx; h.y+=h.vy;
   if(h.x<0)h.x=0; if(h.x>LEVEL_W-h.w)h.x=LEVEL_W-h.w;
   if(cage&&!cage.open){ const lim=cage.x+cage.w-16-h.w; if(h.x>lim){ h.x=lim; if(h.vx>0)h.vx=0; } }
+  if(boulder&&!boulder.gone){ const lim=boulder.x-h.w+6; if(h.x>lim && h.y+h.h>GROUND-130){ h.x=lim; if(h.vx>0)h.vx=0; } }
+  for(const li of listens){ if(li.wall&&!li.done){ const lim=li.wall-h.w+4; if(h.x>lim){ h.x=lim; if(h.vx>0)h.vx=0; } } }
   h.onGround=false;
-  if(h.vy>=0){ const g=groundAt(h.x,h.w,h.y,h.h); if(g){ h.y=g.y-h.h; h.vy=0; h.onGround=true; } }
+  if(h.vy>=0){ const g=groundAt(h.x,h.w,h.y,h.h); if(g){ h.y=g.y-h.h; h.vy=0; h.onGround=true;
+    if(g.mush){ h.vy=CFG.jumpA*1.45; h.onGround=false; g.sq=12; burst(h.x+h.w/2,g.y,"#ffb3c6",8); if(ctrl) sfx([12,19],0.05,0.2); } } } // cogumelo-trampolim
   if(Math.abs(h.vx)>0.5&&h.onGround) h.walk+=0.25; else h.walk=0;
   if(h.throwCd>0)h.throwCd--; if(h.armsT>0)h.armsT--; if(h.digT>0)h.digT--;
   // caiu na água
   if(h.y>GROUND+40){
     if(ctrl){ say(LEVEL===2?"Opa, caiu pela escotilha! Subindo de volta.":"Opa, água! Vamos tentar de novo."); respawn(); }
-    else { h.x=active.x-60*active.face; h.y=active.y; h.vy=0; }
+    else { h.x=leader.x-60*active.face; h.y=leader.y; h.vy=0; }
   }
 }
 function respawn(){
   active.x=lastCheckpoint; active.y=GROUND-active.h-10; active.vx=0; active.vy=0;
-  follower.x=lastCheckpoint-60; follower.y=active.y; follower.vy=0;
+  followers.forEach((f,i)=>{ f.x=lastCheckpoint-60*(i+1); f.y=active.y; f.vy=0; });
   burst(active.x+20,active.y+30,"#8fd3ff",16);
 }
 
@@ -446,8 +518,10 @@ function update(){
     active.x = vine.hookX + Math.sin(a)*len - active.w/2;
     active.y = vine.hookY + Math.cos(a)*len - active.h/2;
     active.vy=0;
-    if(vine.t>=1){ vine.active=false; active.x=vine.endX; active.y=GROUND-active.h-20; active.vy=2; vine.cooldown=40; vine.follow=true; vine.ft=0; say("Uhuuul! Agora é a vez de "+follower.def.name+"!"); }
-    follower.x=vine.startX-40; follower.vy=0; follower.y=GROUND-follower.h;
+    if(vine.t>=1){ vine.active=false; active.x=vine.endX; active.y=GROUND-active.h-20; active.vy=2; vine.cooldown=40;
+      if(LEVEL===3){ followers.forEach((f,i)=>{ f.x=vine.endX-14*(i+1); f.y=GROUND-f.h-10; f.vy=1; burst(f.x+20,f.y+30,"#fff",8); }); say(vines3.every(v=>v.done)?"Ravina vencida! Todos do outro lado.":"Boa! Próximo cipó.",1800); }
+      else { vine.follow=true; vine.ft=0; say("Uhuuul! Agora é a vez de "+follower.def.name+"!"); } }
+    else followers.forEach((f,i)=>{ f.x=vine.startX-40-i*40; f.vy=0; f.y=GROUND-f.h; });
   } else if(vine.follow){
     // o segundo herói atravessa no cipó logo depois
     stepHero(active,true);
@@ -457,7 +531,7 @@ function update(){
     if(vine.ft>=1){ vine.follow=false; follower.x=vine.endX-50; follower.y=GROUND-follower.h-10; follower.vy=2; burst(follower.x+20,follower.y+30,"#fff",10); say("Os dois do outro lado! Sigam em frente."); }
   } else {
     stepHero(active,true);
-    stepHero(follower,false);
+    followers.forEach((f,i)=>stepHero(f,false,i===0?active:followers[i-1]));
     if(vine.cooldown>0)vine.cooldown--;
   }
 
@@ -465,7 +539,7 @@ function update(){
   for(const cp of checkpoints) if(active.x>cp && cp>lastCheckpoint) lastCheckpoint=cp;
 
   // portões de troca
-  for(const g of gates){ if(!g.done && active.x>g.x && active.onGround && follower.onGround && Math.abs(active.x-follower.x)<220){ g.done=true; swapTo('other',g.text); } }
+  for(const g of gates){ if(!g.done && active.x>g.x && active.onGround && followers.every(f=>f.onGround&&Math.abs(active.x-f.x)<260)){ g.done=true; swapTo(g.to||'other',g.text); } }
 
   // coletar
   const hx=active.x+active.w/2, hy=active.y+active.h/2;
@@ -480,15 +554,17 @@ function update(){
   }
 
   // cipó: apertar X perto da beira
-  const nearVine = !vine.active && !vine.follow && vine.cooldown===0 && active.x>vine.startX-140 && active.x<vine.startX+20 && active.onGround;
-  if(nearVine && msgTimer<=0) say(`${CFG.helper.name}: "Aperta X pra agarrar o cipó!"`,1800);
+  if(LEVEL===3){ const v=vines3.find(v=>!v.done && active.x>v.startX-140 && active.x<v.startX+70); if(v&&!vine.active&&vine.cooldown===0){ Object.assign(vine,{hookX:v.hookX,hookY:v.hookY,startX:v.startX,endX:v.endX}); vine.cur=v; } else if(!vine.active) vine.cur=null; }
+  const nearVine = !vine.active && !vine.follow && vine.cooldown===0 && active.x>vine.startX-140 && active.x<vine.startX+(LEVEL===3?70:20) && active.onGround && (LEVEL!==3||vine.cur);
+  if(nearVine && msgTimer<=0){ if(LEVEL===3 && active.def.type!==CFG.skills.vines){ swapTo(CFG.skills.vines,`Cipós? Isso é com ${heroes.find(h=>h.def.type===CFG.skills.vines).def.name}!`); } else say(`${CFG.helper.name}: "Aperta X pra agarrar o cipó!"`,1800); }
   if(keys['x']&&!xHeld){
     if(LEVEL===2){
       if(cage&&!cage.open&&cage.helperArrived&&active.x+active.w>cage.x+cage.w-140){ cage.open=true; bird.armsT=60; burst(cage.x+cage.w,GROUND-60,"#ffd23f",18); sfx([0,4,7,12]); say(`${CFG.helper.name}: "Porta aberta! Corram pra direita!"`,3000); }
       else if(swordChest&&!swordChest.got&&Math.hypot(hx-swordChest.x,hy-(swordChest.y-20))<90){ swordChest.got=true; items.sword=true; burst(swordChest.x,swordChest.y-20,"#ffd23f",20); sfx([7,11,14,19]); say("Espada pirata! Aperta X pra golpear os barris… e o capitão!",3400); }
       else if(items.sword&&active.swingT===0&&!active.climb){ active.swingT=22; active.armsT=active.armsMax; sfx([19,24],0.06,0.2); }
     }
-    else if(nearVine){ vine.active=true; vine.t=0; burst(active.x,active.y,"#4fbf5a",8); }
+    else if(nearVine && (LEVEL!==3 || active.def.type===CFG.skills.vines)){ vine.active=true; vine.t=0; if(vine.cur) vine.cur.done=true; burst(active.x,active.y,"#4fbf5a",8); }
+    else if(LEVEL===3){ forestX(hx,hy); }
     else if(!treasure.found && Math.abs(hx-treasure.x)<70 && active.onGround){
       treasure.digs++; burst(treasure.x,GROUND,"#d9b56e",14); active.armsT=active.armsMax; active.digT=28;
       if(treasure.digs>=treasure.need){ treasure.found=true; state="win"; setTimeout(startCut,900); }
@@ -497,6 +573,7 @@ function update(){
   }
   xHeld=!!keys['x'];
   if(LEVEL===2) updateShip(hx,hy);
+  if(LEVEL===3) updateForest(hx,hy);
 
   // troca manual (C)
   if(keys['c']&&!cHeld&&!vine.active&&!vine.follow){ swapTo('other', "Vai na frente!"); }
@@ -534,8 +611,9 @@ function update(){
   // câmera
   const target = active.x - W*0.4; cam += (target-cam)*0.1; cam=Math.max(0,Math.min(LEVEL_W-W,cam));
 
-  hudL.textContent = `🧭 ${active.def.name}  (${follower.def.name} seguindo)`;
-  if(LEVEL===2) hudR.textContent = `🥥 ${items.coconuts}   ⚔️ ${items.sword?'✓':'?'}` + (boss&&boss.awake&&!boss.done?`   🏴‍☠️ ${'❤️'.repeat(boss.hp)}`:'');
+  hudL.textContent = `🧭 ${active.def.name}  (${followers.map(f=>f.def.name).join(', ')} seguindo)`;
+  if(LEVEL===3) hudR.textContent = `🌰 ${items.coconuts}   🐛 ${CFG.worm.name}`;
+  else if(LEVEL===2) hudR.textContent = `🥥 ${items.coconuts}   ⚔️ ${items.sword?'✓':'?'}` + (boss&&boss.awake&&!boss.done?`   🏴‍☠️ ${'❤️'.repeat(boss.hp)}`:'');
   else hudR.textContent = `🥥 ${items.coconuts}   🪵 ${items.planks}/3`;
 }
 
@@ -588,6 +666,45 @@ function updateShip(hx,hy){
     }
   }
 }
+// ---------- Fase 3: pedra, cipós, escuta, família ----------
+function heroOf(type){ return heroes.find(h=>h.def.type===type); }
+function forestX(hx,hy){
+  // pedra pesada
+  if(boulder&&!boulder.gone&&active.x+active.w>boulder.x-120&&active.x<boulder.x+boulder.w){
+    if(active.def.type!==CFG.skills.strength){ swapTo(CFG.skills.strength,`Pesada demais! Força é com ${heroOf(CFG.skills.strength).def.name}.`); return; }
+    boulder.pushes++; boulder.shake=10; active.armsT=active.armsMax; sfx([0,-5],0.08,0.2);
+    if(boulder.pushes>=boulder.need){ boulder.gone=true; boulder.roll=0; say(`${active.def.name} empurrou a pedra pro lamaçal — virou passagem!`,3000); sfx([0,4,7,12],0.08,0.5); }
+    else { boulder.x+=52; active.x+=52; followers.forEach(f=>f.x+=40); say(`Empurra! (${boulder.pushes}/${boulder.need})`,900); }
+    return;
+  }
+  // escutar a floresta
+  const li=listens.find(l=>!l.done&&Math.abs(hx-l.x)<170);
+  if(li){
+    if(active.def.type!==CFG.skills.hearing){ swapTo(CFG.skills.hearing,`Shh… quem escuta melhor é ${heroOf(CFG.skills.hearing).def.name}!`); return; }
+    li.done=true; li.t=90; active.armsT=active.armsMax; sfx([7,12,16,19],0.05,0.6);
+    if(li.kind==='wall') say(`${CFG.helper.name}: "Ouviu o riacho? O caminho é por ali — as folhas abriram!"`,3400);
+    else { wormFamily.visible=true; say(`${CFG.helper.name}: "Ouviu? A família do ${CFG.worm.name} está chamando ali na clareira!"`,3600); }
+  }
+}
+function updateForest(hx,hy){
+  // dicas de proximidade
+  if(msgTimer<=0){
+    if(boulder&&!boulder.gone&&active.x+active.w>boulder.x-120&&active.x<boulder.x) say(`${CFG.helper.name}: "Uma pedra enorme! Aperta X pra empurrar."`,1800);
+    const li=listens.find(l=>!l.done&&Math.abs(hx-l.x)<170); if(li) say(`${CFG.helper.name}: "Tá ouvindo alguma coisa? Aperta X pra escutar."`,1800);
+  }
+  if(boulder){ if(boulder.shake>0)boulder.shake--; if(boulder.gone&&boulder.roll<1){ boulder.roll+=0.03; if(boulder.roll>=1){ boulder.roll=1; water=water.filter(w=>w.x!==boulder.pit.x); solids.push({x:boulder.pit.x-10,y:GROUND,w:boulder.pit.w+20,h:200}); burst(boulder.pit.x+80,GROUND,"#6b4a2a",24); } } }
+  for(const li of listens){ if(li.t>0){ li.t--; if(li.kind==='wall'&&li.t===45){ li.wall=null; burst(4300,GROUND-90,"#7ed37e",30); } } }
+  for(const m of mushrooms) if(m.sq>0)m.sq--;
+  if(wormFamily.visible) wormFamily.t++;
+  // a minhoca vai no ombro de quem lidera
+  if(worm&&!worm.free){ worm.wig+=0.15; worm.x=active.x+active.w/2-active.face*6; worm.y=active.y-CFG.worm.offsetY; }
+  if(worm&&worm.free){ worm.hop+=0.2; }
+  // final: chegou na família
+  if(wormFamily.visible&&!worm.free&&active.x+active.w>wormFamily.x-120){
+    worm.free=true; worm.x=wormFamily.x-70; worm.y=GROUND; burst(worm.x,GROUND-20,"#ffd23f",30); sfx([0,4,7,12,16],0.1,0.8);
+    say(`${CFG.worm.name} encontrou a família! Que festa!`,3500); state="win"; setTimeout(showWin3,3200);
+  }
+}
 function popBarrel(b){ burst(b.x,b.y,"#a9733a",14); burst(b.x,b.y,"#5e3a18",6); sfx([12,7],0.05,0.15); }
 function bossHit(){
   boss.hp--; boss.dizzy=150; burst(boss.x+boss.w/2,boss.y+30,"#fff",22); sfx([16,19,24],0.08,0.3);
@@ -625,6 +742,17 @@ function showWin2(){
   ovText.textContent=`${CFG.heroA.name} e ${CFG.heroB.name} venceram o capitão pirata e assumiram o leme, com ${CFG.helper.name} no mastro. O mar é todo nosso! Para onde vamos agora? (Episódio 3 em breve)`;
   document.getElementById('startBtn').textContent="Jogar de novo desde a ilha";
   document.getElementById('l2Btn').textContent="Jogar o navio de novo";
+  document.getElementById('l3Btn').textContent="Seguir para o episódio 3 →";
+}
+function showWin3(){
+  stopMusic();
+  if(MUSIC.ac&&MUSIC.on){ const t=MUSIC.ac.currentTime+0.1; [0,4,7,12,16,19,24].forEach((n,i)=>pluck(t+i*0.07,f(n,4),1.8,0.12,3000)); bass(t,f(0,2),2); }
+  overlay.classList.remove('hidden');
+  overlay.querySelector('h1').textContent=`${CFG.worm.name} está em casa!`;
+  ovText.textContent=`${CFG.heroA.name}, ${CFG.heroB.name} e ${CFG.heroC.name} levaram ${CFG.worm.name} até a família, com ${CFG.helper.name} anotando tudo no caderno de cientista. A floresta inteira cantou! (Episódio 4 em breve)`;
+  document.getElementById('startBtn').textContent="Jogar de novo desde a ilha";
+  document.getElementById('l2Btn').textContent="Jogar o navio de novo";
+  document.getElementById('l3Btn').textContent="Jogar a floresta de novo";
 }
 
 // ---------- Desenho ----------
@@ -704,12 +832,12 @@ function drawPirate(x,by,face,sc,armsT,walk,captain,dizzy){
 }
 function drawHero(h,isActive){
   const d=h.def, x=h.x-cam, y=h.y; const bob = h.onGround?Math.abs(Math.sin(h.walk))*4:0;
-  const key = d===CFG.heroA?'heroA':'heroB';
+  const key = d===CFG.heroA?'heroA':d===CFG.heroB?'heroB':'heroC';
   if(SHEET[key]){
     const sh=SHEET[key], cfg=CFG.sheets[key];
     const anim = h.climb?(cfg.frames.arms?'arms':'jump'):(h.armsT>0&&cfg.frames.arms)?'arms':(!h.onGround?'jump':(Math.abs(h.vx)>0.5?'walk':'idle')), n=cfg.frames[anim];
     let fi; if(h.climb){ fi=Math.floor(h.y/14)%n; } else if(anim==='jump'){ const p=Math.max(0,Math.min(1,(h.vy+15)/30)); fi=Math.min(n-1,Math.floor(p*n)); } else if(anim==='arms'){ fi=Math.min(n-1,Math.floor((1-h.armsT/h.armsMax)*n)); } else { fi=Math.floor(Date.now()/(1000/cfg.fps))%n; }
-    const hh=d===CFG.heroA?CFG.sprites.heightA:CFG.sprites.heightB, foot=d===CFG.heroA?CFG.sprites.footA:CFG.sprites.footB;
+    const hh=d===CFG.heroA?CFG.sprites.heightA:d===CFG.heroB?CFG.sprites.heightB:CFG.sprites.heightC, foot=d===CFG.heroA?CFG.sprites.footA:d===CFG.heroB?CFG.sprites.footB:CFG.sprites.footC;
     if(CFG.sprites.shadow){ ctx.fillStyle="rgba(0,0,0,.18)"; ctx.beginPath(); ctx.ellipse(x+h.w/2,y+h.h+2,hh*0.3,6,0,0,Math.PI*2); ctx.fill(); }
     drawSheetFrame(sh,cfg,anim,fi,h.face,x+h.w/2,y+h.h,hh,false,foot);
     drawShovel(h,x+h.w/2,y+h.h,hh); drawSword(h,x+h.w/2,y+h.h,hh);
@@ -717,11 +845,11 @@ function drawHero(h,isActive){
     return;
   }
   if(IMG[key]){
-    const im=IMG[key], hh=d===CFG.heroA?CFG.sprites.heightA:CFG.sprites.heightB, ww=hh*im.width/im.height;
+    const im=IMG[key], hh=d===CFG.heroA?CFG.sprites.heightA:d===CFG.heroB?CFG.sprites.heightB:CFG.sprites.heightC, ww=hh*im.width/im.height;
     ctx.save(); ctx.translate(x+h.w/2,y+h.h); ctx.scale(h.face,1);
     if(CFG.sprites.shadow){ ctx.fillStyle="rgba(0,0,0,.18)"; ctx.beginPath(); ctx.ellipse(0,2,ww*0.4,6,0,0,Math.PI*2); ctx.fill(); }
     const tilt = h.onGround?Math.sin(h.walk)*0.06:(h.vy<0?-0.12:0.08);
-    ctx.rotate(tilt); ctx.drawImage(im,-ww/2,-hh-bob+(d===CFG.heroA?CFG.sprites.footA:CFG.sprites.footB)*hh/im.height,ww,hh);
+    ctx.rotate(tilt); ctx.drawImage(im,-ww/2,-hh-bob+(d===CFG.heroA?CFG.sprites.footA:d===CFG.heroB?CFG.sprites.footB:CFG.sprites.footC)*hh/im.height,ww,hh);
     ctx.restore();
     drawShovel(h,x+h.w/2,y+h.h,hh); drawSword(h,x+h.w/2,y+h.h,hh);
     if(isActive){ ctx.fillStyle="#fff"; ctx.beginPath(); ctx.moveTo(x+h.w/2-8,y+h.h-hh-18); ctx.lineTo(x+h.w/2+8,y+h.h-hh-18); ctx.lineTo(x+h.w/2,y+h.h-hh-8); ctx.fill(); }
@@ -797,6 +925,7 @@ function drawBird(){
   const HK='helper'+LEVEL;
   if(SHEET[HK]){ const sh=SHEET[HK], cfg=CFG.sheets[HK]; const anim=(bird.armsT>0&&cfg.frames.arms)?'arms':(bird.armsT>0?'jump':(bird.walking?'walk':'idle')), n=cfg.frames[anim]; const fi=anim==='arms'?Math.min(n-1,Math.floor((1-bird.armsT/60)*n)):Math.floor(Date.now()/(1000/cfg.fps))%n; drawSheetFrame(sh,cfg,anim,fi,bird.face,x,y,CFG.sprites.heightHelper,false,CFG.sprites.footHelper); return; }
   if(IMG[HK]){ const im=IMG[HK], hh=CFG.sprites.heightHelper, ww=hh*im.width/im.height; ctx.save(); ctx.translate(x,y); ctx.scale(bird.face,1); ctx.drawImage(im,-ww/2,-hh+CFG.sprites.footHelper*hh/im.height,ww,hh); ctx.restore(); return; }
+  if(LEVEL===3){ drawScientist(x,y); return; }
   // desenho padrão: passarinha pousada/andando no chão
   ctx.save(); ctx.translate(x,y-14+(bird.walking?Math.abs(Math.sin(bird.wing*1.5))*-4:0)); ctx.scale(bird.face,1);
   ctx.fillStyle=CFG.helper.color; ctx.beginPath(); ctx.ellipse(0,0,16,11,0,0,Math.PI*2); ctx.fill();
@@ -808,6 +937,39 @@ function drawBird(){
   ctx.restore();
 }
 
+function drawScientist(x,by){
+  const t=Date.now(), walk=bird.walking?Math.sin(t/90)*5:0, bob=bird.walking?Math.abs(Math.sin(t/90))*3:0;
+  ctx.save(); ctx.translate(x,by); ctx.scale(bird.face,1);
+  ctx.fillStyle="rgba(0,0,0,.2)"; ctx.beginPath(); ctx.ellipse(0,2,22,6,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle="#5a3a24"; rr(-12+walk,-16,10,16,3); ctx.fill(); rr(2-walk,-16,10,16,3); ctx.fill();             // botinhas
+  ctx.fillStyle="#f7f3ea"; rr(-20,-72-bob,40,58,10); ctx.fill(); ctx.fillStyle="#d9d2c4"; ctx.fillRect(-1,-70-bob,2,50);   // jaleco
+  ctx.fillStyle="#3fae5a"; rr(-9,-70-bob,18,22,4); ctx.fill();                                                        // blusa
+  ctx.strokeStyle="#f7f3ea"; ctx.lineWidth=9; ctx.lineCap="round";
+  ctx.beginPath(); ctx.moveTo(-18,-62-bob); ctx.lineTo(-24,-36-bob); ctx.stroke();
+  const up=bird.armsT>0?-26:0; ctx.beginPath(); ctx.moveTo(18,-62-bob); ctx.lineTo(26,-40-bob+up); ctx.stroke();
+  ctx.fillStyle="#f1c8a0"; ctx.beginPath(); ctx.arc(-24,-36-bob,6,0,Math.PI*2); ctx.arc(26,-40-bob+up,6,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle="#8a5a2b"; rr(18,-52-bob+up,14,18,2); ctx.fill(); ctx.fillStyle="#fff"; ctx.fillRect(21,-49-bob+up,8,2); ctx.fillRect(21,-44-bob+up,8,2); // caderninho
+  const hy=-90-bob; ctx.fillStyle="#f1c8a0"; ctx.beginPath(); ctx.arc(0,hy,20,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle="#6b3a1e"; ctx.beginPath(); ctx.arc(0,hy-8,21,Math.PI,0); ctx.fill(); ctx.beginPath(); ctx.arc(-6,hy-26,10,0,Math.PI*2); ctx.fill(); // cabelo com coque
+  ctx.strokeStyle="#333"; ctx.lineWidth=2.5; ctx.beginPath(); ctx.arc(-7,hy-2,6,0,Math.PI*2); ctx.arc(8,hy-2,6,0,Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(-1,hy-2); ctx.lineTo(2,hy-2); ctx.stroke(); // óculos
+  ctx.fillStyle="#222"; ctx.beginPath(); ctx.arc(-6,hy-2,2.5,0,Math.PI*2); ctx.arc(9,hy-2,2.5,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle="#5a1e2a"; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(1,hy+6,6,0.2,Math.PI-0.2); ctx.stroke();
+  ctx.restore();
+}
+// minhoca genérica e simpática (pés em x,y)
+function drawWorm(x,y,happy){
+  if(SHEET.worm){ const cfg=CFG.sheets.worm, anim=happy&&cfg.frames.jump?'jump':'idle', n=cfg.frames[anim], fi=Math.floor(Date.now()/(1000/cfg.fps))%n; drawSheetFrame(SHEET.worm,cfg,anim,fi,active.face,x,y,cfg.height,false,cfg.foot); return; }
+  const t=Date.now()/1000, k=happy?Math.abs(Math.sin(t*8))*14:0;
+  ctx.save(); ctx.translate(x,y-k);
+  ctx.strokeStyle="#e38fa3"; ctx.lineWidth=16; ctx.lineCap="round";
+  ctx.beginPath(); ctx.moveTo(-26,0); for(let i=0;i<=5;i++){ const px=-26+i*9, py=-Math.abs(Math.sin(t*3+i))*6; ctx.lineTo(px,py); } ctx.lineTo(20,-12); ctx.stroke();
+  ctx.strokeStyle="rgba(0,0,0,.12)"; ctx.lineWidth=2; for(let i=0;i<4;i++){ ctx.beginPath(); ctx.moveTo(-20+i*9,-9); ctx.lineTo(-20+i*9,7); ctx.stroke(); }
+  ctx.fillStyle="#e38fa3"; ctx.beginPath(); ctx.arc(22,-14,11,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle="#fff"; ctx.beginPath(); ctx.arc(20,-17,4.5,0,Math.PI*2); ctx.arc(28,-17,4.5,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle="#222"; ctx.beginPath(); ctx.arc(21,-17,2,0,Math.PI*2); ctx.arc(29,-17,2,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle="#7a2e40"; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(25,-11,4,0.2,Math.PI-0.2); ctx.stroke();
+  ctx.restore();
+}
 function drawPalm(x,y,s,shade){
   ctx.save(); ctx.translate(x,y); ctx.scale(s,s);
   const trunk=shade?"#6f4a2a":"#8a5a2b", leaf=shade?"#2f7a3a":"#3f9a46", leaf2=shade?"#3b8f45":"#5fb860";
@@ -835,9 +997,10 @@ function drawBgIsland(x,y,s,col){ ctx.fillStyle=col; ctx.beginPath(); ctx.moveTo
 
 function draw(){
   if(!PAT) makePatterns();
-  if(LEVEL===2) draw2(); else draw1();
+  if(LEVEL===3) draw3(); else if(LEVEL===2) draw2(); else draw1();
   if(state==="cut") drawCut();
   if(cut&&cut.fadeIn>0){ cut.fadeIn--; ctx.fillStyle=`rgba(0,0,0,${cut.fadeIn/70})`; ctx.fillRect(0,0,W,H); }
+  if(titleCard&&titleCard.t>0){ titleCard.t--; const a=Math.min(1,titleCard.t/40); ctx.fillStyle=`rgba(0,0,0,${a*0.85})`; ctx.fillRect(0,0,W,H); ctx.fillStyle=`rgba(255,247,228,${a})`; ctx.textAlign='center'; ctx.font='700 34px Baloo 2, Fredoka, system-ui, sans-serif'; ctx.fillText('Episódio '+titleCard.n,W/2,H/2-30); ctx.font='800 72px Baloo 2, Fredoka, system-ui, sans-serif'; ctx.fillText(titleCard.name,W/2,H/2+50); ctx.textAlign='left'; }
 }
 function draw1(){
   const t=Date.now();
@@ -906,7 +1069,7 @@ function draw1(){
   for(const p of particles){ ctx.fillStyle=p.c; ctx.globalAlpha=Math.max(0,p.life/40); ctx.fillRect(p.x-3,p.y-3,6,6); } ctx.globalAlpha=1;
   ctx.restore();
 
-  if(heroes){ drawHero(follower,false); drawHero(active,true); drawBird(); }
+  if(heroes){ [...followers].reverse().forEach(f=>drawHero(f,false)); drawHero(active,true); drawBird(); }
   // primeiro plano: tufos e pedras passando mais rápido (profundidade)
   for(let i=0;i<10;i++){ const fx=((i*700+200 - cam*1.25)%(W+800)+W+800)%(W+800)-400; const fy=H-30+((i*17)%30);
     if(i%3===0){ ctx.fillStyle="rgba(90,110,120,.9)"; ctx.beginPath(); ctx.ellipse(fx,fy+10,46,22,0,0,Math.PI*2); ctx.fill(); ctx.fillStyle="rgba(255,255,255,.18)"; ctx.beginPath(); ctx.ellipse(fx-12,fy+2,18,8,0,0,Math.PI*2); ctx.fill(); }
@@ -944,6 +1107,71 @@ function drawCut(){
     if(a>0.7){ ctx.fillStyle=`rgba(255,247,228,${(a-0.7)/0.3})`; ctx.textAlign="center"; ctx.font="700 34px Baloo 2, Fredoka, system-ui, sans-serif"; ctx.fillText("Episódio 2",W/2,H/2-30); ctx.font="800 72px Baloo 2, Fredoka, system-ui, sans-serif"; ctx.fillText("O Navio Pirata",W/2,H/2+50); ctx.textAlign="left"; }
   }
 }
+
+// ---------- Fase 3: desenho da floresta ----------
+function drawTree(x,y,sc,dark){
+  ctx.save(); ctx.translate(x,y); ctx.scale(sc,sc);
+  ctx.fillStyle=dark?"#1f4a2a":"#4a2f18"; rr(-22,-260,44,260,10); ctx.fill();
+  ctx.fillStyle=dark?"#1b4326":"#2f7a3a"; for(const [dx,dy,r] of [[-70,-250,70],[70,-250,70],[0,-300,80],[-40,-200,60],[40,-200,60]]){ ctx.beginPath(); ctx.arc(dx,dy,r,0,Math.PI*2); ctx.fill(); }
+  if(!dark){ ctx.fillStyle="#4fa85a"; for(const [dx,dy,r] of [[-60,-262,40],[80,-258,36],[10,-310,46]]){ ctx.beginPath(); ctx.arc(dx,dy,r,0,Math.PI*2); ctx.fill(); } }
+  ctx.restore();
+}
+function drawLeafClump(x,y,sc,col){ ctx.save(); ctx.translate(x,y); ctx.scale(sc,sc); ctx.fillStyle=col; for(let i=0;i<5;i++){ ctx.save(); ctx.rotate(-Math.PI/2+(i-2)*0.45); ctx.beginPath(); ctx.ellipse(0,-60,22,65,0,0,Math.PI*2); ctx.fill(); ctx.restore(); } ctx.restore(); }
+function draw3(){
+  const t=Date.now();
+  // copa fechada: verde escuro em cima, luz filtrada
+  const g=ctx.createLinearGradient(0,0,0,H); g.addColorStop(0,"#0f3a22"); g.addColorStop(0.45,"#2f7a3a"); g.addColorStop(0.8,"#a9d36b"); ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  for(let i=0;i<5;i++){ const lx=((i*330 - cam*0.05)%(W+400)+W+400)%(W+400)-200; const lg=ctx.createLinearGradient(lx,0,lx+140,H); lg.addColorStop(0,"rgba(255,250,200,.18)"); lg.addColorStop(1,"rgba(255,250,200,0)"); ctx.fillStyle=lg; ctx.beginPath(); ctx.moveTo(lx,0); ctx.lineTo(lx+120,0); ctx.lineTo(lx+260,H); ctx.lineTo(lx+40,H); ctx.fill(); } // feixes de luz
+  // árvores ao fundo (duas camadas)
+  for(let i=0;i<9;i++){ const tx=((i*520+100 - cam*0.15)%(W+700)+W+700)%(W+700)-350; drawTree(tx,GROUND+20,0.9+(i%3)*0.15,true); }
+  for(let i=0;i<7;i++){ const tx=((i*640+320 - cam*0.35)%(W+800)+W+800)%(W+800)-400; drawTree(tx,GROUND+10,1.1+(i%2)*0.2,false); }
+  // vagalumes
+  if(forest) for(const fl of forest.fireflies){ const fx=fl.x-cam*0.6, fy=fl.y+Math.sin(t/700+fl.p)*12; if(fx<-20||fx>W+20) continue; const a=0.4+0.6*Math.abs(Math.sin(t/500+fl.p)); ctx.fillStyle=`rgba(255,240,120,${a})`; ctx.beginPath(); ctx.arc(fx,fy,3,0,Math.PI*2); ctx.fill(); ctx.fillStyle=`rgba(255,240,120,${a*0.25})`; ctx.beginPath(); ctx.arc(fx,fy,9,0,Math.PI*2); ctx.fill(); }
+
+  ctx.save(); ctx.translate(-cam,0);
+  // lamaçais / ravina
+  for(const wt of water){ ctx.fillStyle="#3b2a18"; ctx.fillRect(wt.x,GROUND+10,wt.w,H-GROUND); ctx.fillStyle="#5a3f22"; ctx.beginPath(); ctx.ellipse(wt.x+wt.w/2,GROUND+22,wt.w/2,10,0,0,Math.PI*2); ctx.fill(); ctx.fillStyle="rgba(255,255,255,.12)"; for(let i=0;i<3;i++){ ctx.beginPath(); ctx.arc(wt.x+20+i*wt.w/3+Math.sin(t/900+i)*4,GROUND+30+(i%2)*14,4,0,Math.PI*2); ctx.fill(); } }
+  // chão de terra com grama; plataformas de galho
+  for(const sd of solids){
+    if(sd.h>100){ ctx.fillStyle="#6b4a2a"; ctx.fillRect(sd.x,sd.y,sd.w,H-sd.y); ctx.fillStyle=PAT.grass||"#5fb860"; ctx.fillRect(sd.x,sd.y-6,sd.w,26); ctx.fillStyle="#3f9a46"; for(let x=sd.x;x<sd.x+sd.w;x+=28){ ctx.beginPath(); ctx.moveTo(x,sd.y+2); ctx.lineTo(x+8,sd.y-14); ctx.lineTo(x+16,sd.y+2); ctx.fill(); } }
+    else if(!sd.mush){ ctx.fillStyle="rgba(0,0,0,.2)"; rr(sd.x+4,sd.y+6,sd.w,sd.h,10); ctx.fill(); ctx.fillStyle="#7a4a24"; rr(sd.x,sd.y,sd.w,sd.h,10); ctx.fill(); ctx.fillStyle="#5fb860"; rr(sd.x-6,sd.y-8,sd.w+12,14,7); ctx.fill(); }
+  }
+  // galho dos cipós + cipós pendurados (os já usados ficam balançando do outro lado)
+  if(vines3.length){ ctx.fillStyle="#4a2f18"; rr(2300,350,900,26,12); ctx.fill(); drawLeafClump(2320,352,0.9,"#2f7a3a"); drawLeafClump(3180,352,0.9,"#2f7a3a");
+    for(const v of vines3){ if(vine.active&&vine.cur===v) continue; const sx=v.done?v.endX:v.startX; const sw=Math.sin(t/600+v.hookX)*8; ctx.strokeStyle="#4fbf5a"; ctx.lineWidth=7; ctx.lineCap="round"; ctx.beginPath(); ctx.moveTo(v.hookX,v.hookY); ctx.quadraticCurveTo(v.hookX+(sx-v.hookX)/2+sw,v.hookY+120,sx+22,GROUND-90); ctx.stroke(); ctx.fillStyle="#3f9a46"; ctx.beginPath(); ctx.ellipse(sx+22,GROUND-90,10,16,0.4,0,Math.PI*2); ctx.fill(); }
+    if(vine.active){ ctx.strokeStyle="#4fbf5a"; ctx.lineWidth=7; ctx.beginPath(); ctx.moveTo(vine.hookX,vine.hookY); ctx.lineTo(active.x+active.w/2,active.y+10); ctx.stroke(); } }
+  // cogumelos-trampolim
+  for(const m of mushrooms){ const sq=m.sq/12, cx=m.x+m.w/2; ctx.fillStyle="#f3e2c0"; rr(cx-14,m.y+8,28,GROUND-m.y-8,6); ctx.fill(); ctx.save(); ctx.translate(cx,m.y+16); ctx.scale(1+sq*0.25,1-sq*0.45); ctx.fillStyle="#ff6b8a"; ctx.beginPath(); ctx.ellipse(0,0,m.w/2+8,22,0,Math.PI,0); ctx.fill(); ctx.fillStyle="#fff"; for(const [dx,dy,r] of [[-24,-8,6],[0,-14,7],[22,-6,5]]){ ctx.beginPath(); ctx.arc(dx,dy,r,0,Math.PI*2); ctx.fill(); } ctx.restore(); }
+  // pedra
+  if(boulder){ const r=boulder.w/2; let cx=boulder.x+r, cy=GROUND-r, rot=boulder.x/r;
+    if(boulder.gone){ const p=boulder.roll, px=boulder.pit.x+boulder.pit.w/2; cx=cx+(px-cx)*p; cy=GROUND-r+(boulder.pit.w*0.0+r*2-16)*Math.min(1,Math.max(0,(p-0.5)*2)); rot+=p*3; }
+    const sh=boulder.shake>0?Math.sin(boulder.shake*2)*3:0;
+    ctx.save(); ctx.translate(cx+sh,cy); ctx.rotate(rot); const gg=ctx.createRadialGradient(-r*0.3,-r*0.4,r*0.1,0,0,r); gg.addColorStop(0,"#9a9a92"); gg.addColorStop(1,"#4d4d47"); ctx.fillStyle=gg; ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.fill(); ctx.fillStyle="rgba(0,0,0,.15)"; for(const [dx,dy,rr2] of [[-20,10,12],[25,-18,9],[10,30,7]]){ ctx.beginPath(); ctx.arc(dx,dy,rr2,0,Math.PI*2); ctx.fill(); } ctx.fillStyle="#5fb860"; ctx.beginPath(); ctx.ellipse(-10,-r+6,22,8,0,0,Math.PI*2); ctx.fill(); ctx.restore(); }
+  // mata fechada (parede de folhas) e ondas do som
+  for(const li of listens){
+    if(li.kind==='wall'){ const open=li.wall===null, k=open?Math.min(1,(45-Math.min(li.t,45))/45):0; const wx=4300;
+      const spread=k*150;
+      for(const side of [-1,1]) for(let i=0;i<7;i++){ const cx=wx+40+side*(26+spread+(i%2)*10), cy=GROUND-24-i*42, r=38-(i%3)*4;
+        ctx.fillStyle=i%2?"#2b6b35":"#1f5429"; ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill();
+        ctx.fillStyle="#3f9a46"; ctx.beginPath(); ctx.ellipse(cx-r*0.3*side,cy-r*0.4,r*0.45,r*0.25,-0.5*side,0,Math.PI*2); ctx.fill(); }
+      if(!open){ ctx.fillStyle="rgba(255,255,255,.7)"; ctx.font="700 26px system-ui"; ctx.fillText("?",wx+30,GROUND-310); } }
+    if(li.t>0){ const a=li.t/90, dir=li.kind==='wall'?1:1, ox=li.x+dir*200; ctx.strokeStyle=`rgba(255,255,255,${a*0.8})`; ctx.lineWidth=4; for(let i=0;i<3;i++){ const rr3=(90-li.t)*3+i*30; ctx.beginPath(); ctx.arc(ox,GROUND-80,rr3,-Math.PI*0.4,Math.PI*0.4); ctx.stroke(); } ctx.font="700 28px system-ui"; ctx.fillStyle=`rgba(255,255,255,${a})`; ctx.fillText(li.kind==='wall'?"♪ ~ ~":"♫ ♪ ♫",ox+40,GROUND-120); }
+  }
+  // família do Sherman (aparece depois da escuta)
+  if(wormFamily&&wormFamily.visible){ const fx=wormFamily.x; ctx.fillStyle="#4a2f18"; rr(fx-40,GROUND-60,220,60,20); ctx.fill(); ctx.fillStyle="#5fb860"; rr(fx-46,GROUND-70,232,22,10); ctx.fill(); for(let i=0;i<4;i++){ ctx.save(); ctx.translate(fx+i*50,GROUND-60); ctx.scale(0.8+(i%2)*0.3,0.8+(i%2)*0.3); drawWormSmall(Math.sin(wormFamily.t/8+i)*8); ctx.restore(); } }
+  // castanhas e arremessos
+  for(const c of coconuts) if(!c.got){ ctx.fillStyle="#8a5a2b"; ctx.beginPath(); ctx.ellipse(c.x,c.y+Math.sin(t/350+c.x)*3,12,14,0,0,Math.PI*2); ctx.fill(); ctx.fillStyle="#d9b56e"; ctx.beginPath(); ctx.ellipse(c.x,c.y-9+Math.sin(t/350+c.x)*3,8,4,0,0,Math.PI*2); ctx.fill(); }
+  for(const sh of shots){ ctx.fillStyle="#8a5a2b"; ctx.beginPath(); ctx.arc(sh.x,sh.y,10,0,Math.PI*2); ctx.fill(); }
+  for(const p of particles){ ctx.fillStyle=p.c; ctx.globalAlpha=Math.max(0,p.life/40); ctx.fillRect(p.x-3,p.y-3,6,6); } ctx.globalAlpha=1;
+  ctx.restore();
+
+  if(heroes){ [...followers].reverse().forEach(f=>drawHero(f,false)); drawHero(active,true); drawBird(); }
+  if(worm){ drawWorm(worm.x-cam, worm.y, worm.free); }
+  // primeiro plano: folhagem grande passando rápido
+  for(let i=0;i<7;i++){ const fx=((i*700+200 - cam*1.25)%(W+900)+W+900)%(W+900)-450; drawLeafClump(fx,H+70,1.0,"rgba(20,70,35,.85)"); }
+  const vg=ctx.createRadialGradient(W/2,H/2,H*0.5,W/2,H/2,H*1.05); vg.addColorStop(0,"rgba(0,0,0,0)"); vg.addColorStop(1,"rgba(5,30,15,.45)"); ctx.fillStyle=vg; ctx.fillRect(0,0,W,H);
+}
+function drawWormSmall(k){ ctx.strokeStyle="#e38fa3"; ctx.lineWidth=12; ctx.lineCap="round"; ctx.beginPath(); ctx.moveTo(-18,0); ctx.quadraticCurveTo(-4,-10-k,8,-2); ctx.lineTo(16,-14-k); ctx.stroke(); ctx.fillStyle="#e38fa3"; ctx.beginPath(); ctx.arc(18,-18-k,8,0,Math.PI*2); ctx.fill(); ctx.fillStyle="#fff"; ctx.beginPath(); ctx.arc(16,-20-k,3,0,Math.PI*2); ctx.arc(22,-20-k,3,0,Math.PI*2); ctx.fill(); ctx.fillStyle="#222"; ctx.beginPath(); ctx.arc(17,-20-k,1.4,0,Math.PI*2); ctx.arc(23,-20-k,1.4,0,Math.PI*2); ctx.fill(); }
 
 // ---------- Fase 2: desenho do navio ----------
 function drawBarrel(x,y,r,rot){
@@ -1038,7 +1266,7 @@ function draw2(){
   for(const p of particles){ ctx.fillStyle=p.c; ctx.globalAlpha=Math.max(0,p.life/40); ctx.fillRect(p.x-3,p.y-3,6,6); } ctx.globalAlpha=1;
   ctx.restore();
 
-  if(heroes){ drawHero(follower,false); drawHero(active,true); drawBird(); }
+  if(heroes){ [...followers].reverse().forEach(f=>drawHero(f,false)); drawHero(active,true); drawBird(); }
   // primeiro plano: cordas enroladas e a amurada da frente passando rápido
   for(let i=0;i<8;i++){ const fx=((i*900+300 - cam*1.2)%(W+800)+W+800)%(W+800)-400; ctx.strokeStyle="#c9a46a"; ctx.lineWidth=8; for(let k=0;k<3;k++){ ctx.beginPath(); ctx.ellipse(fx,H-24-k*7,40-k*4,12,0,0,Math.PI*2); ctx.stroke(); } }
   const vg=ctx.createRadialGradient(W/2,H/2,H*0.55,W/2,H/2,H*1.05); vg.addColorStop(0,"rgba(0,0,0,0)"); vg.addColorStop(1,"rgba(20,20,40,.35)"); ctx.fillStyle=vg; ctx.fillRect(0,0,W,H);

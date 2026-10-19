@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0 — Episódio 3: O Coração da Floresta
+- Terceiro herói (`CFG.heroC`, nome provisório "Herói 3") — o jogo passa a suportar três heróis, com dois seguidores que pulam junto e evitam buracos.
+- Habilidades da selva em `CFG.skills`: força (empurrar a pedra pro lamaçal), cipós (cadeia de três cipós sobre a ravina), ouvido (escutar pra abrir a mata fechada e achar a família). O herói certo assume sozinho quando o desafio aparece.
+- Sherman (`CFG.worm`) viaja na cabeça de quem lidera e reencontra a família na clareira. Cogumelos-trampolim, lamaçais, castanhas.
+- Side do episódio 3 é a cientista (desenho padrão de jaleco; `assets/ep3/ajudante_sheet.png`).
+- Opereta original (baixo "oom", pizzicato "pah", clarinete saltitante) em dó maior.
+- Cartão de título ao começar cada episódio; botão "Ir direto à floresta"; fim do episódio 2 leva ao 3.
+
 ## 0.2.4
 - Pulo mais longo (alcance ~270 px) e tolerante: vale apertar um pouco antes ou um pouco depois da beirada.
 - O herói que vem atrás pula junto com o líder e também pula sozinho ao ver um buraco à frente.

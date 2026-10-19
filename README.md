@@ -21,6 +21,7 @@ No toque (tablet/celular) os botões aparecem sozinhos; o 🎮 no topo liga/desl
 ## Episódios
 1. **Ilha dos Náufragos** — tábuas → ponte, cipó, caranguejos, tesouro enterrado.
 2. **O Navio Pirata** — cela, barris, cordas do mastro, espada, capitão.
+3. **O Coração da Floresta** — três heróis com habilidades (força, cipós, ouvido) levam a minhoca Sherman de volta à família, com a cientista Side.
 
 ## Imagens
 Ver [`assets/README.md`](assets/README.md). Sem imagens o jogo usa desenhos próprios.
