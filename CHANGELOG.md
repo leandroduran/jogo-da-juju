@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.3.1
+- Sherman anda de pé no chão, logo atrás de quem lidera (não vai mais na cabeça). `CFG.worm.offset` = distância atrás do líder.
+
 ## 0.3.0 — Episódio 3: O Coração da Floresta
 - Terceiro herói (`CFG.heroC`, nome provisório "Herói 3") — o jogo passa a suportar três heróis, com dois seguidores que pulam junto e evitam buracos.
 - Habilidades da selva em `CFG.skills`: força (empurrar a pedra pro lamaçal), cipós (cadeia de três cipós sobre a ravina), ouvido (escutar pra abrir a mata fechada e achar a família). O herói certo assume sozinho quando o desafio aparece.
