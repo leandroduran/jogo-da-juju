@@ -119,6 +119,8 @@ const CFG = {
     // caranguejo: 6 linhas — 0 parado frente, 1 andando frente, 2 garras frente, 3 parado costas, 4 andando costas, 5 garras costas (quadros 512×512)
     crab1:{ file:"assets/ep1/caranguejo_sheet.png", cols:6, rows:6, frames:{idle:2, walk:6, claws:6, idleBack:2, walkBack:6, clawsBack:6}, fps:8, height:95, foot:70 },
     crab2:{ file:"assets/ep2/caranguejo_sheet.png", cols:6, rows:6, frames:{idle:2, walk:6, claws:6, idleBack:2, walkBack:6, clawsBack:6}, fps:8, height:95, foot:70 }, // caranguejo de porão (navio)
+    // tatu-bola: folha com linhas por lado (sem espelhar). rowsLR = número da linha de cada animação; 'curl' = enrolar (toca uma vez, segura, e desenrola no fim)
+    crab3:{ file:"assets/ep3/tatu_sheet.png", cols:6, rows:6, layout:'lr', rowsLR:{ idleR:0, walkR:1, curlR:2, idleL:3, walkL:3, curlL:4 }, frames:{idle:6, walk:6, curl:6, idleL:1}, fps:8, height:95, foot:30 },
     // piratas da fase 2 (opcionais): mesmo esquema dos heróis — linhas: parado, andando, pulando (usada quando tonto), braços (jogando barril); 4 linhas olhando pra DIREITA (o jogo espelha) ou 8 linhas
     pirate:{ file:"assets/ep2/pirata_sheet.png", cols:6, rows:4, frames:{idle:2, walk:6, jump:6, arms:6}, fps:8, height:150, foot:22 },
     captain:{ file:"assets/ep2/capitao_sheet.png", cols:6, rows:4, frames:{idle:2, walk:6, jump:6, arms:6}, fps:8, height:220, foot:22 },
@@ -136,7 +138,7 @@ const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const IMG={};
 for(const k of ['heroA','heroB','heroC','helper1','helper2','helper3']){ const im=new Image(); im.onload=()=>{IMG[k]=im;}; im.onerror=()=>{}; im.src=CFG.sprites[k]; }
 const SHEET={};
-for(const k of ['heroA','heroB','heroC','helper1','helper2','helper3','crab1','crab2','pirate','captain','worm']){ const im=new Image(); im.onload=()=>{SHEET[k]=im;}; im.onerror=()=>{}; im.src=CFG.sheets[k].file; }
+for(const k of ['heroA','heroB','heroC','helper1','helper2','helper3','crab1','crab2','crab3','pirate','captain','worm']){ const im=new Image(); im.onload=()=>{SHEET[k]=im;}; im.onerror=()=>{}; im.src=CFG.sheets[k].file; }
 
 // ---------- Mundo ----------
 let LEVEL=1, LEVEL_W=7000;
@@ -191,20 +193,21 @@ function buildLevel3(){
   const nameOf=t=>[CFG.heroA,CFG.heroB,CFG.heroC].find(d=>d.type===t).name;
   solids=[
     {x:0,y:GROUND,w:1000,h:200},{x:1150,y:GROUND,w:500,h:200},{x:1810,y:GROUND,w:590,h:200},
-    {x:2580,y:GROUND,w:90,h:200},{x:2870,y:GROUND,w:90,h:200},                      // ilhotas da ravina
-    {x:3130,y:GROUND,w:770,h:200},{x:4060,y:GROUND,w:1140,h:200},{x:5370,y:GROUND,w:1300,h:200},
+    {x:2580,y:GROUND,w:150,h:200},{x:2920,y:GROUND,w:150,h:200},                    // ilhotas da ravina (cabem os três)
+    {x:3250,y:GROUND,w:650,h:200},{x:4060,y:GROUND,w:1140,h:200},{x:5370,y:GROUND,w:1300,h:200},
     {x:700,y:470,w:140,h:24},{x:1250,y:460,w:140,h:24},
     {x:3400,y:450,w:150,h:24},{x:3650,y:360,w:150,h:24},
     {x:4700,y:470,w:140,h:24},{x:4950,y:380,w:140,h:24},{x:5500,y:470,w:150,h:24},
   ];
-  water=[{x:1000,w:150},{x:1650,w:160},{x:2400,w:180},{x:2670,w:200},{x:2960,w:170},{x:3900,w:160},{x:5200,w:170}]; // lamaçais e ravina
-  planks=[]; crabs=[]; barrels=[];
+  water=[{x:1000,w:150},{x:1650,w:160},{x:2400,w:180},{x:2730,w:190},{x:3070,w:180},{x:3900,w:160},{x:5200,w:170}]; // lamaçais e ravina
+  planks=[]; barrels=[];
+  crabs=[{x:450,min:300,max:950,dir:1,stun:0,flee:0},{x:2100,min:1880,max:2350,dir:-1,stun:0,flee:0},{x:3500,min:3200,max:3850,dir:1,stun:0,flee:0},{x:4800,min:4400,max:5150,dir:-1,stun:0,flee:0},{x:5600,min:5400,max:6000,dir:1,stun:0,flee:0}]; // tatus-bola
   coconuts=[{x:720,y:430},{x:770,y:430},{x:1290,y:420},{x:3450,y:410},{x:3700,y:320},{x:3750,y:320},{x:4750,y:430},{x:5000,y:340},{x:5550,y:430}];
   mushrooms=[{x:3290,y:GROUND-40,w:90,h:20,sq:0,mush:true},{x:4480,y:GROUND-40,w:90,h:20,sq:0,mush:true},{x:5620,y:GROUND-40,w:90,h:20,sq:0,mush:true}];
   solids.push(...mushrooms);
   boulder={x:1440,w:150,pushes:0,need:4,gone:false,roll:0,pit:{x:1650,w:160},shake:0};
-  vines3=[{hookX:2475,hookY:380,startX:2340,endX:2610,done:false},{hookX:2745,hookY:380,startX:2610,endX:2880,done:false},{hookX:3015,hookY:380,startX:2880,endX:3150,done:false}];
-  listens=[{x:4150,wall:4300,done:false,t:0,kind:'wall'},{x:5950,wall:null,done:false,t:0,kind:'family'}];
+  vines3=[{hookX:2475,hookY:380,startX:2340,endX:2610,at:'start'},{hookX:2795,hookY:380,startX:2660,endX:2930,at:'start'},{hookX:3135,hookY:380,startX:3000,endX:3270,at:'start'}]; // vão e voltam
+  listens=[{x:4150,wall:4300,wallX:4300,done:false,t:0,kind:'wall'},{x:6050,zone:[5750,6500],wall:6480,wallX:6480,done:false,t:0,kind:'family'}]; // a 2ª escuta vale em toda a clareira; a mata no fim só abre depois
   wormFamily={x:6250,visible:false,t:0};
   gates=[{x:600,to:CFG.skills.strength,text:`${nameOf(CFG.skills.strength)} na frente! Tem algo pesado logo ali.`},
          {x:3350,to:CFG.skills.hearing,text:`Agora quem guia é ${nameOf(CFG.skills.hearing)}. Ouvidos atentos!`},
@@ -212,7 +215,7 @@ function buildLevel3(){
   bridge={x:-9999,w:0,built:false,need:3};
   vine={hookX:-99999,hookY:380,startX:-99999,endX:-99999,active:false,t:0,cooldown:0,follow:false,ft:0,cur:null};
   treasure={x:-99999,digs:0,need:6,found:true};
-  checkpoints=[100,1250,2200,3250,4100,4700,5500];
+  checkpoints=[100,1250,2200,3300,4100,4700,5500];
   forest={fireflies:Array.from({length:26},(_,i)=>({x:(i*257)%LEVEL_W,y:120+(i*131)%380,p:i*0.7}))};
 }
 
@@ -513,15 +516,15 @@ function update(){
   // cipó em andamento
   if(vine.active){
     vine.t+=reduceMotion?0.03:0.018;
-    const a = -Math.PI*0.42 + vine.t*Math.PI*0.84; // de -75° a +75°
+    const a = (vine.dir||1)*(-Math.PI*0.42 + vine.t*Math.PI*0.84); // de -75° a +75° (ou ao contrário, voltando)
     const len = GROUND-80-vine.hookY;
     active.x = vine.hookX + Math.sin(a)*len - active.w/2;
     active.y = vine.hookY + Math.cos(a)*len - active.h/2;
     active.vy=0;
     if(vine.t>=1){ vine.active=false; active.x=vine.endX; active.y=GROUND-active.h-20; active.vy=2; vine.cooldown=40;
-      if(LEVEL===3){ if(worm){ worm.x=vine.endX-30; worm.y=GROUND; } followers.forEach((f,i)=>{ f.x=vine.endX-14*(i+1); f.y=GROUND-f.h-10; f.vy=1; burst(f.x+20,f.y+30,"#fff",8); }); say(vines3.every(v=>v.done)?"Ravina vencida! Todos do outro lado.":"Boa! Próximo cipó.",1800); }
+      if(LEVEL===3){ const dir=vine.dir||1; if(vine.cur) vine.cur.at = dir>0?'end':'start'; if(worm){ worm.x=vine.endX+dir*50; worm.y=GROUND; } followers.forEach((f,i)=>{ f.x=vine.endX+dir*30*(i+1); f.y=GROUND-f.h-10; f.vy=1; burst(f.x+20,f.y+30,"#fff",8); }); say(dir<0?"Voltamos!":vines3.every(v=>v.at==='end')?"Ravina vencida! Todos do outro lado.":"Boa! Próximo cipó.",1800); }
       else { vine.follow=true; vine.ft=0; say("Uhuuul! Agora é a vez de "+follower.def.name+"!"); } }
-    else followers.forEach((f,i)=>{ f.x=vine.startX-40-i*40; f.vy=0; f.y=GROUND-f.h; });
+    else followers.forEach((f,i)=>{ f.x=vine.startX-(vine.dir||1)*(40+i*40); f.vy=0; f.y=GROUND-f.h; });
   } else if(vine.follow){
     // o segundo herói atravessa no cipó logo depois
     stepHero(active,true);
@@ -539,7 +542,8 @@ function update(){
   for(const cp of checkpoints) if(active.x>cp && cp>lastCheckpoint) lastCheckpoint=cp;
 
   // portões de troca
-  for(const g of gates){ if(!g.done && active.x>g.x && active.onGround && followers.every(f=>f.onGround&&Math.abs(active.x-f.x)<260)){ g.done=true; swapTo(g.to||'other',g.text); } }
+  for(const g of gates){ if(g.done) continue; if(active.x>g.x+500){ g.done=true; continue; } // já passou faz tempo (volta ao checkpoint): não troca do nada
+    if(active.x>g.x && active.onGround && !vine.active && !vine.follow && followers.every(f=>f.onGround&&Math.abs(active.x-f.x)<260)){ g.done=true; swapTo(g.to||'other',g.text); } }
 
   // coletar
   const hx=active.x+active.w/2, hy=active.y+active.h/2;
@@ -554,8 +558,10 @@ function update(){
   }
 
   // cipó: apertar X perto da beira
-  if(LEVEL===3){ const v=vines3.find(v=>!v.done && active.x>v.startX-140 && active.x<v.startX+70); if(v&&!vine.active&&vine.cooldown===0){ Object.assign(vine,{hookX:v.hookX,hookY:v.hookY,startX:v.startX,endX:v.endX}); vine.cur=v; } else if(!vine.active) vine.cur=null; }
-  const nearVine = !vine.active && !vine.follow && vine.cooldown===0 && active.x>vine.startX-140 && active.x<vine.startX+(LEVEL===3?70:20) && active.onGround && (LEVEL!==3||vine.cur);
+  if(LEVEL===3){ const cands=vines3.filter(v=> v.at==='start' ? (active.x>v.startX-140 && active.x<v.startX+70) : (active.x>v.endX-70 && active.x<v.endX+140));
+    const v = cands.find(v=>(v.at==='start')===(active.face>0)) || cands[0]; // numa ilhota com dois cipós, vai pro lado que o herói está olhando
+    if(v&&!vine.active&&vine.cooldown===0){ const fwd=v.at==='start'; Object.assign(vine,{hookX:v.hookX,hookY:v.hookY,startX:fwd?v.startX:v.endX,endX:fwd?v.endX:v.startX,dir:fwd?1:-1}); vine.cur=v; } else if(!vine.active) vine.cur=null; }
+  const nearVine = !vine.active && !vine.follow && vine.cooldown===0 && active.onGround && (LEVEL===3 ? !!vine.cur : (active.x>vine.startX-140 && active.x<vine.startX+20));
   if(nearVine && msgTimer<=0){ if(LEVEL===3 && active.def.type!==CFG.skills.vines){ swapTo(CFG.skills.vines,`Cipós? Isso é com ${heroes.find(h=>h.def.type===CFG.skills.vines).def.name}!`); } else say(`${CFG.helper.name}: "Aperta X pra agarrar o cipó!"`,1800); }
   if(keys['x']&&!xHeld){
     if(LEVEL===2){
@@ -563,7 +569,8 @@ function update(){
       else if(swordChest&&!swordChest.got&&Math.hypot(hx-swordChest.x,hy-(swordChest.y-20))<90){ swordChest.got=true; items.sword=true; burst(swordChest.x,swordChest.y-20,"#ffd23f",20); sfx([7,11,14,19]); say("Espada pirata! Aperta X pra golpear os barris… e o capitão!",3400); }
       else if(items.sword&&active.swingT===0&&!active.climb){ active.swingT=22; active.armsT=active.armsMax; sfx([19,24],0.06,0.2); }
     }
-    else if(nearVine && (LEVEL!==3 || active.def.type===CFG.skills.vines)){ vine.active=true; vine.t=0; if(vine.cur) vine.cur.done=true; burst(active.x,active.y,"#4fbf5a",8); }
+    else if(nearVine && (LEVEL!==3 || active.def.type===CFG.skills.vines)){ vine.active=true; vine.t=0; if(LEVEL!==3) vine.dir=1; burst(active.x,active.y,"#4fbf5a",8); }
+    else if(nearVine && LEVEL===3){ swapTo(CFG.skills.vines,`Cipós? Isso é com ${heroOf(CFG.skills.vines).def.name}!`); }
     else if(LEVEL===3){ forestX(hx,hy); }
     else if(!treasure.found && Math.abs(hx-treasure.x)<70 && active.onGround){
       treasure.digs++; burst(treasure.x,GROUND,"#d9b56e",14); active.armsT=active.armsMax; active.digT=28;
@@ -591,10 +598,10 @@ function update(){
   // caranguejos
   for(const c of crabs){
     if(c.stun>0){ c.stun--; if(c.stun===0){ c.flee=150; c.dir = (active.x+active.w/2>c.x)?-1:1; burst(c.x,GROUND-30,"#fff",8); } continue; }
-    if(c.flee>0){ c.flee--; c.x+=c.dir*4.2; if(c.x<c.min){c.x=c.min;c.dir=1;} if(c.x>c.max){c.x=c.max;c.dir=-1;} if(c.flee===0) say("O caranguejo criou coragem e voltou.",1200); continue; } // foge de costas, sem pinçar
+    if(c.flee>0){ c.flee--; c.x+=c.dir*4.2; if(c.x<c.min){c.x=c.min;c.dir=1;} if(c.x>c.max){c.x=c.max;c.dir=-1;} if(c.flee===0) say(LEVEL===3?"O tatu criou coragem e voltou.":"O caranguejo criou coragem e voltou.",1200); continue; } // foge de costas, sem pinçar
     c.x+=c.dir*1.6; if(c.x<c.min||c.x>c.max)c.dir*=-1;
-    for(const s of shots){ if(Math.hypot(s.x-c.x,s.y-(GROUND-22))<36){ c.stun=360; s.life=0; burst(c.x,GROUND-22,"#ff6b6b",12); say("Acertou! O caranguejo ficou tonto."); } }
-    if(Math.abs(hx-c.x)<40 && active.y+active.h>GROUND-40 && !vine.active){ active.vx=-active.face*9; active.vy=-7; active.x+=active.vx*2; burst(hx,hy,"#ff6b6b",8); say("Ai! Pinça de caranguejo!",1200); }
+    for(const s of shots){ if(Math.hypot(s.x-c.x,s.y-(GROUND-22))<36){ c.stun=360; s.life=0; burst(c.x,GROUND-22,"#ff6b6b",12); say(LEVEL===3?"Acertou! O tatu virou bolinha.":"Acertou! O caranguejo ficou tonto."); } }
+    if(Math.abs(hx-c.x)<40 && active.y+active.h>GROUND-40 && !vine.active){ active.vx=-active.face*9; active.vy=-7; active.x+=active.vx*2; burst(hx,hy,"#ff6b6b",8); say(LEVEL===3?"Ai! O tatu te empurrou!":"Ai! Pinça de caranguejo!",1200); }
   }
 
   // partículas e passarinha
@@ -678,7 +685,7 @@ function forestX(hx,hy){
     return;
   }
   // escutar a floresta
-  const li=listens.find(l=>!l.done&&Math.abs(hx-l.x)<170);
+  const li=listens.find(l=>!l.done&&(l.zone ? (hx>l.zone[0]&&hx<l.zone[1]) : Math.abs(hx-l.x)<170));
   if(li){
     if(active.def.type!==CFG.skills.hearing){ swapTo(CFG.skills.hearing,`Shh… quem escuta melhor é ${heroOf(CFG.skills.hearing).def.name}!`); return; }
     li.done=true; li.t=90; active.armsT=active.armsMax; sfx([7,12,16,19],0.05,0.6);
@@ -690,16 +697,17 @@ function updateForest(hx,hy){
   // dicas de proximidade
   if(msgTimer<=0){
     if(boulder&&!boulder.gone&&active.x+active.w>boulder.x-120&&active.x<boulder.x) say(`${CFG.helper.name}: "Uma pedra enorme! Aperta X pra empurrar."`,1800);
-    const li=listens.find(l=>!l.done&&Math.abs(hx-l.x)<170); if(li) say(`${CFG.helper.name}: "Tá ouvindo alguma coisa? Aperta X pra escutar."`,1800);
+    const li=listens.find(l=>!l.done&&(l.zone ? (hx>l.zone[0]&&hx<l.zone[1]) : Math.abs(hx-l.x)<170)); if(li) say(li.kind==='family'?`${CFG.helper.name}: "Chegamos na clareira! Onde será que a família está? ${heroOf(CFG.skills.hearing).def.name}, aperta X pra escutar."`:`${CFG.helper.name}: "Tá ouvindo alguma coisa? Aperta X pra escutar."`,2200);
   }
   if(boulder){ if(boulder.shake>0)boulder.shake--; if(boulder.gone&&boulder.roll<1){ boulder.roll+=0.03; if(boulder.roll>=1){ boulder.roll=1; water=water.filter(w=>w.x!==boulder.pit.x); solids.push({x:boulder.pit.x-10,y:GROUND,w:boulder.pit.w+20,h:200}); burst(boulder.pit.x+80,GROUND,"#6b4a2a",24); } } }
-  for(const li of listens){ if(li.t>0){ li.t--; if(li.kind==='wall'&&li.t===45){ li.wall=null; burst(4300,GROUND-90,"#7ed37e",30); } } }
+  for(const li of listens){ if(li.t>0){ li.t--; if(li.t===45&&li.wall!==null){ li.wall=null; burst(li.wallX,GROUND-90,"#7ed37e",30); } } }
   for(const m of mushrooms) if(m.sq>0)m.sq--;
   if(wormFamily.visible) wormFamily.t++;
   // a minhoca vai no ombro de quem lidera
   if(worm&&!worm.free){ // minhoca de pé, andando atrás do líder (mesma lógica de chão da ajudante)
     const wtx=active.x+active.w/2-active.face*CFG.worm.offset, wdx=wtx-worm.x;
-    worm.vx = Math.abs(wdx)>6 ? Math.sign(wdx)*Math.min(Math.abs(wdx)*0.12, CFG.speed*1.15) : 0; worm.x+=worm.vx; worm.face = worm.vx!==0?Math.sign(worm.vx):active.face; worm.walking=Math.abs(worm.vx)>0.4;
+    worm.vx = Math.abs(wdx)>6 ? Math.sign(wdx)*Math.min(Math.abs(wdx)*0.12, CFG.speed*1.15) : 0;
+    { const nx=worm.x+worm.vx; if(worm.vx!==0 && !solids.some(sd=>!sd.mush&&nx>sd.x&&nx<sd.x+sd.w&&sd.y>=active.y+active.h-120) && Math.abs(wdx)<300) worm.vx=0; } worm.x+=worm.vx; worm.face = worm.vx!==0?Math.sign(worm.vx):active.face; worm.walking=Math.abs(worm.vx)>0.4;
     let wfloor=null; for(const sd of solids){ if(worm.x>sd.x && worm.x<sd.x+sd.w && sd.y>=active.y+active.h-120 && !sd.mush){ if(wfloor===null||sd.y<wfloor) wfloor=sd.y; } }
     const wy = wfloor!==null ? wfloor : active.y+active.h; worm.y += (wy-worm.y)*0.3; worm.wig+=worm.walking?0.3:0.08;
     if(Math.abs(wdx)>500){ worm.x=wtx; } }
@@ -905,6 +913,18 @@ function drawCrabs(){
   const CROW={idle:0,walk:1,claws:2,idleBack:3,walkBack:4,clawsBack:5};
   for(const c of crabs){
     const CK='crab'+LEVEL;
+    if(SHEET[CK] && CFG.sheets[CK].layout==='lr'){ // folha com direita/esquerda em linhas separadas (tatu)
+      const sh=SHEET[CK], cfg=CFG.sheets[CK], fw=sh.width/cfg.cols, fh=sh.height/cfg.rows, hh=cfg.height, ww=hh*fw/fh;
+      const right = c.dir>0; let row, fi;
+      if(c.stun>0){ const n=cfg.frames.curl, el=360-c.stun; row=right?cfg.rowsLR.curlR:cfg.rowsLR.curlL;
+        fi = el<n*6 ? Math.floor(el/6) : (c.stun<n*6 ? Math.floor(c.stun/6) : n-1); }       // enrola, segura, desenrola
+      else { const walking=true; row = walking ? (right?cfg.rowsLR.walkR:cfg.rowsLR.walkL) : (right?cfg.rowsLR.idleR:cfg.rowsLR.idleL);
+        const n = walking ? cfg.frames.walk : (right?cfg.frames.idle:(cfg.frames.idleL||cfg.frames.idle)); fi=Math.floor(Date.now()/(1000/(c.flee>0?cfg.fps*2:cfg.fps)))%n; }
+      if(c.stun>0){ ctx.save(); ctx.translate(c.x,GROUND-hh*0.35); ctx.rotate(Math.sin(c.stun/6)*0.15); ctx.translate(-c.x,-(GROUND-hh*0.35)); }
+      ctx.drawImage(sh, fi*fw, row*fh, fw, fh, c.x-ww/2, GROUND-hh+cfg.foot*hh/fh, ww, hh);
+      if(c.stun>0) ctx.restore();
+      continue;
+    }
     if(SHEET[CK]){
       const sh=SHEET[CK], cfg=CFG.sheets[CK], fw=sh.width/cfg.cols, fh=sh.height/cfg.rows, hh=cfg.height, ww=hh*fw/fh;
       const heroNear = active && Math.abs(active.x+active.w/2-c.x)<140 && active.y+active.h>GROUND-60;
@@ -915,6 +935,7 @@ function drawCrabs(){
       ctx.drawImage(sh, fi*fw, CROW[anim]*fh, fw, fh, -ww/2, -hh+cfg.foot*hh/fh, ww, hh);
       ctx.restore(); continue;
     }
+    if(LEVEL===3){ drawArmadillo(c); continue; }
     ctx.save(); ctx.translate(c.x,GROUND-14); if(c.stun>0) ctx.rotate(Math.PI); if(c.flee>0){ ctx.scale(1,0.9); ctx.translate(0,Math.abs(Math.sin(Date.now()/60))*-4); }
     ctx.fillStyle=c.stun>0?"#ffb0b0":"#ff5e5e"; ctx.beginPath(); ctx.ellipse(0,0,28,16,0,0,Math.PI*2); ctx.fill();
     ctx.strokeStyle=c.stun>0?"#ffb0b0":"#ff5e5e"; ctx.lineWidth=5;
@@ -922,6 +943,29 @@ function drawCrabs(){
     ctx.fillStyle="#fff"; ctx.beginPath(); ctx.arc(-8,-10,5,0,Math.PI*2); ctx.arc(8,-10,5,0,Math.PI*2); ctx.fill(); ctx.fillStyle="#222"; ctx.beginPath(); ctx.arc(-8,-10,2,0,Math.PI*2); ctx.arc(8,-10,2,0,Math.PI*2); ctx.fill();
     ctx.restore();
   }
+}
+function drawArmadillo(c){
+  const t=Date.now(), walk=c.flee>0?t/40:t/110;
+  ctx.save(); ctx.translate(c.x,GROUND);
+  ctx.fillStyle="rgba(0,0,0,.2)"; ctx.beginPath(); ctx.ellipse(0,2,30,6,0,0,Math.PI*2); ctx.fill();
+  if(c.stun>0){ // bolinha balançando
+    ctx.translate(0,-24); ctx.rotate(Math.sin(c.stun/6)*0.25);
+    const g=ctx.createRadialGradient(-8,-8,4,0,0,26); g.addColorStop(0,"#c9a27a"); g.addColorStop(1,"#7a5a3a"); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(0,0,24,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle="rgba(0,0,0,.25)"; ctx.lineWidth=2; for(let i=-2;i<=2;i++){ ctx.beginPath(); ctx.arc(0,0,24,Math.PI/2+i*0.45-0.2,Math.PI/2+i*0.45+0.2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(i*9,-22); ctx.lineTo(i*9,22); ctx.stroke(); }
+    ctx.fillStyle="#ffd23f"; for(let i=0;i<3;i++){ const a=t/300+i*2.1; ctx.beginPath(); ctx.arc(Math.cos(a)*30,-30+Math.sin(a)*8,3.5,0,Math.PI*2); ctx.fill(); }
+    ctx.restore(); return;
+  }
+  ctx.scale(c.dir,1); if(c.flee>0) ctx.scale(-1,1); // fugindo: de costas
+  const bob=Math.abs(Math.sin(walk))*2;
+  ctx.fillStyle="#6b4a2a"; for(let i=-1;i<=1;i+=2){ rr(i*14-5+Math.sin(walk+i)*4,-12,10,12,3); ctx.fill(); rr(i*4-5-Math.sin(walk+i)*4,-12,10,12,3); ctx.fill(); } // patinhas
+  ctx.strokeStyle="#c9a27a"; ctx.lineWidth=5; ctx.lineCap="round"; ctx.beginPath(); ctx.moveTo(-26,-14-bob); ctx.quadraticCurveTo(-40,-16,-46,-6+Math.sin(walk)*3); ctx.stroke(); // rabo
+  const g=ctx.createLinearGradient(0,-40,0,-6); g.addColorStop(0,"#a98160"); g.addColorStop(1,"#7a5a3a"); ctx.fillStyle=g; ctx.beginPath(); ctx.ellipse(-4,-22-bob,28,17,0,Math.PI,0); ctx.fill(); ctx.fillRect(-32,-22-bob,56,8); // casco
+  ctx.strokeStyle="rgba(0,0,0,.2)"; ctx.lineWidth=2; for(let i=-2;i<=2;i++){ ctx.beginPath(); ctx.moveTo(-4+i*9,-38-bob+Math.abs(i)*3); ctx.lineTo(-4+i*9,-14-bob); ctx.stroke(); }
+  ctx.fillStyle="#d9b89a"; ctx.beginPath(); ctx.ellipse(-4,-12-bob,26,7,0,0,Math.PI); ctx.fill(); // barriga
+  ctx.fillStyle="#c9a27a"; ctx.beginPath(); ctx.ellipse(28,-18-bob,14,10,0.1,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.moveTo(22,-28-bob); ctx.lineTo(18,-40-bob); ctx.lineTo(28,-30-bob); ctx.fill(); // cabeça e orelha
+  ctx.fillStyle="#3a2210"; ctx.beginPath(); ctx.arc(41,-18-bob,3,0,Math.PI*2); ctx.fill(); // focinho
+  ctx.fillStyle="#fff"; ctx.beginPath(); ctx.arc(30,-21-bob,4.5,0,Math.PI*2); ctx.fill(); ctx.fillStyle="#222"; ctx.beginPath(); ctx.arc(31,-21-bob,2.2,0,Math.PI*2); ctx.fill();
+  ctx.restore();
 }
 function rr(x,y,w,h,r){ ctx.beginPath(); if(ctx.roundRect){ ctx.roundRect(x,y,w,h,r); return; } r=Math.min(r,w/2,h/2); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
 
@@ -971,6 +1015,7 @@ function drawWorm(x,y,happy){
   ctx.strokeStyle="#e38fa3"; ctx.lineWidth=18; ctx.lineCap="round";
   ctx.beginPath(); ctx.moveTo(0,-8); ctx.quadraticCurveTo(-sway,-30,sway*0.6,-50); ctx.lineTo(sway*0.8,-62); ctx.stroke();
   ctx.strokeStyle="rgba(0,0,0,.12)"; ctx.lineWidth=2; for(let i=0;i<4;i++){ const yy=-16-i*11, sx=-sway*(1-i/4)*0.5+sway*0.6*(i/4); ctx.beginPath(); ctx.moveTo(sx-8,yy); ctx.lineTo(sx+8,yy); ctx.stroke(); }
+  ctx.fillStyle="#fff5a8"; for(const [dx,dy] of [[-4,-14],[4,-24],[-3,-36],[4,-47],[-2,-57]]){ const sx=-sway*(1+dy/62)*0.5+sway*0.6*(-dy/62); ctx.beginPath(); ctx.arc(sx+dx,dy,2.6,0,Math.PI*2); ctx.fill(); } // bolinhas
   // cabeça
   const hx=sway*0.8, hy=-72; ctx.fillStyle="#e38fa3"; ctx.beginPath(); ctx.arc(hx,hy,13,0,Math.PI*2); ctx.fill();
   ctx.fillStyle="rgba(255,255,255,.3)"; ctx.beginPath(); ctx.ellipse(hx-4,hy-5,5,3,-0.6,0,Math.PI*2); ctx.fill();
@@ -1148,7 +1193,7 @@ function draw3(){
   }
   // galho dos cipós + cipós pendurados (os já usados ficam balançando do outro lado)
   if(vines3.length){ ctx.fillStyle="#4a2f18"; rr(2300,350,900,26,12); ctx.fill(); drawLeafClump(2320,352,0.9,"#2f7a3a"); drawLeafClump(3180,352,0.9,"#2f7a3a");
-    for(const v of vines3){ if(vine.active&&vine.cur===v) continue; const sx=v.done?v.endX:v.startX; const sw=Math.sin(t/600+v.hookX)*8; ctx.strokeStyle="#4fbf5a"; ctx.lineWidth=7; ctx.lineCap="round"; ctx.beginPath(); ctx.moveTo(v.hookX,v.hookY); ctx.quadraticCurveTo(v.hookX+(sx-v.hookX)/2+sw,v.hookY+120,sx+22,GROUND-90); ctx.stroke(); ctx.fillStyle="#3f9a46"; ctx.beginPath(); ctx.ellipse(sx+22,GROUND-90,10,16,0.4,0,Math.PI*2); ctx.fill(); }
+    for(const v of vines3){ if(vine.active&&vine.cur===v) continue; const sx=v.at==='end'?v.endX:v.startX; const sw=Math.sin(t/600+v.hookX)*8; ctx.strokeStyle="#4fbf5a"; ctx.lineWidth=7; ctx.lineCap="round"; ctx.beginPath(); ctx.moveTo(v.hookX,v.hookY); ctx.quadraticCurveTo(v.hookX+(sx-v.hookX)/2+sw,v.hookY+120,sx+22,GROUND-90); ctx.stroke(); ctx.fillStyle="#3f9a46"; ctx.beginPath(); ctx.ellipse(sx+22,GROUND-90,10,16,0.4,0,Math.PI*2); ctx.fill(); }
     if(vine.active){ ctx.strokeStyle="#4fbf5a"; ctx.lineWidth=7; ctx.beginPath(); ctx.moveTo(vine.hookX,vine.hookY); ctx.lineTo(active.x+active.w/2,active.y+10); ctx.stroke(); } }
   // cogumelos-trampolim
   for(const m of mushrooms){ const sq=m.sq/12, cx=m.x+m.w/2; ctx.fillStyle="#f3e2c0"; rr(cx-14,m.y+8,28,GROUND-m.y-8,6); ctx.fill(); ctx.save(); ctx.translate(cx,m.y+16); ctx.scale(1+sq*0.25,1-sq*0.45); ctx.fillStyle="#ff6b8a"; ctx.beginPath(); ctx.ellipse(0,0,m.w/2+8,22,0,Math.PI,0); ctx.fill(); ctx.fillStyle="#fff"; for(const [dx,dy,r] of [[-24,-8,6],[0,-14,7],[22,-6,5]]){ ctx.beginPath(); ctx.arc(dx,dy,r,0,Math.PI*2); ctx.fill(); } ctx.restore(); }
@@ -1159,19 +1204,23 @@ function draw3(){
     ctx.save(); ctx.translate(cx+sh,cy); ctx.rotate(rot); const gg=ctx.createRadialGradient(-r*0.3,-r*0.4,r*0.1,0,0,r); gg.addColorStop(0,"#9a9a92"); gg.addColorStop(1,"#4d4d47"); ctx.fillStyle=gg; ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.fill(); ctx.fillStyle="rgba(0,0,0,.15)"; for(const [dx,dy,rr2] of [[-20,10,12],[25,-18,9],[10,30,7]]){ ctx.beginPath(); ctx.arc(dx,dy,rr2,0,Math.PI*2); ctx.fill(); } ctx.fillStyle="#5fb860"; ctx.beginPath(); ctx.ellipse(-10,-r+6,22,8,0,0,Math.PI*2); ctx.fill(); ctx.restore(); }
   // mata fechada (parede de folhas) e ondas do som
   for(const li of listens){
-    if(li.kind==='wall'){ const open=li.wall===null, k=open?Math.min(1,(45-Math.min(li.t,45))/45):0; const wx=4300;
+    { const open=li.wall===null, k=open?Math.min(1,(45-Math.min(li.t,45))/45):0; const wx=li.wallX;
       const spread=k*150;
       for(const side of [-1,1]) for(let i=0;i<7;i++){ const cx=wx+40+side*(26+spread+(i%2)*10), cy=GROUND-24-i*42, r=38-(i%3)*4;
         ctx.fillStyle=i%2?"#2b6b35":"#1f5429"; ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill();
         ctx.fillStyle="#3f9a46"; ctx.beginPath(); ctx.ellipse(cx-r*0.3*side,cy-r*0.4,r*0.45,r*0.25,-0.5*side,0,Math.PI*2); ctx.fill(); }
       if(!open){ ctx.fillStyle="rgba(255,255,255,.7)"; ctx.font="700 26px system-ui"; ctx.fillText("?",wx+30,GROUND-310); } }
-    if(li.t>0){ const a=li.t/90, dir=li.kind==='wall'?1:1, ox=li.x+dir*200; ctx.strokeStyle=`rgba(255,255,255,${a*0.8})`; ctx.lineWidth=4; for(let i=0;i<3;i++){ const rr3=(90-li.t)*3+i*30; ctx.beginPath(); ctx.arc(ox,GROUND-80,rr3,-Math.PI*0.4,Math.PI*0.4); ctx.stroke(); } ctx.font="700 28px system-ui"; ctx.fillStyle=`rgba(255,255,255,${a})`; ctx.fillText(li.kind==='wall'?"♪ ~ ~":"♫ ♪ ♫",ox+40,GROUND-120); }
+    if(li.t>0){ const a=li.t/90, ox=li.kind==='family'?wormFamily.x:li.x+200; ctx.strokeStyle=`rgba(255,255,255,${a*0.8})`; ctx.lineWidth=4; for(let i=0;i<3;i++){ const rr3=(90-li.t)*3+i*30; ctx.beginPath(); ctx.arc(ox,GROUND-80,rr3,-Math.PI*0.4,Math.PI*0.4); ctx.stroke(); } ctx.font="700 28px system-ui"; ctx.fillStyle=`rgba(255,255,255,${a})`; ctx.fillText(li.kind==='wall'?"♪ ~ ~":"♫ ♪ ♫",ox+40,GROUND-120); }
   }
-  // família do Sherman (aparece depois da escuta)
-  if(wormFamily&&wormFamily.visible){ const fx=wormFamily.x; ctx.fillStyle="#4a2f18"; rr(fx-40,GROUND-60,220,60,20); ctx.fill(); ctx.fillStyle="#5fb860"; rr(fx-46,GROUND-70,232,22,10); ctx.fill(); for(let i=0;i<4;i++){ ctx.save(); ctx.translate(fx+i*50,GROUND-60); ctx.scale(0.8+(i%2)*0.3,0.8+(i%2)*0.3); drawWormSmall(Math.sin(wormFamily.t/8+i)*8); ctx.restore(); } }
+  // toca da família: tronco oco sempre visível, com notinhas saindo (sinal de que tem alguém lá); a família aparece depois da escuta
+  if(wormFamily){ const fx=wormFamily.x; ctx.fillStyle="#4a2f18"; rr(fx-40,GROUND-60,220,60,20); ctx.fill(); ctx.fillStyle="#5fb860"; rr(fx-46,GROUND-70,232,22,10); ctx.fill();
+    ctx.fillStyle="#2a1a0c"; ctx.beginPath(); ctx.ellipse(fx-40,GROUND-30,14,22,0,0,Math.PI*2); ctx.fill(); ctx.fillStyle="#3a2412"; ctx.beginPath(); ctx.ellipse(fx+180,GROUND-30,14,22,0,0,Math.PI*2); ctx.fill();
+    if(!wormFamily.visible){ for(let i=0;i<3;i++){ const ph=(t/900+i*0.33)%1; ctx.fillStyle=`rgba(255,240,150,${(1-ph)*0.9})`; ctx.font="700 26px system-ui"; ctx.fillText(i%2?"♪":"♫",fx+40+i*50+Math.sin(ph*6)*8,GROUND-80-ph*90); } ctx.fillStyle="rgba(255,255,255,.8)"; ctx.font="700 30px system-ui"; ctx.fillText("?",fx+80,GROUND-100-Math.sin(t/400)*6); } }
+  if(wormFamily&&wormFamily.visible){ const fx=wormFamily.x; for(let i=0;i<4;i++){ ctx.save(); ctx.translate(fx+i*50,GROUND-60); ctx.scale(0.8+(i%2)*0.3,0.8+(i%2)*0.3); drawWormSmall(Math.sin(wormFamily.t/8+i)*8, WORM_COLORS[i]); ctx.restore(); } }
   // castanhas e arremessos
   for(const c of coconuts) if(!c.got){ ctx.fillStyle="#8a5a2b"; ctx.beginPath(); ctx.ellipse(c.x,c.y+Math.sin(t/350+c.x)*3,12,14,0,0,Math.PI*2); ctx.fill(); ctx.fillStyle="#d9b56e"; ctx.beginPath(); ctx.ellipse(c.x,c.y-9+Math.sin(t/350+c.x)*3,8,4,0,0,Math.PI*2); ctx.fill(); }
   for(const sh of shots){ ctx.fillStyle="#8a5a2b"; ctx.beginPath(); ctx.arc(sh.x,sh.y,10,0,Math.PI*2); ctx.fill(); }
+  drawCrabs();
   for(const p of particles){ ctx.fillStyle=p.c; ctx.globalAlpha=Math.max(0,p.life/40); ctx.fillRect(p.x-3,p.y-3,6,6); } ctx.globalAlpha=1;
   ctx.restore();
 
@@ -1181,7 +1230,12 @@ function draw3(){
   for(let i=0;i<7;i++){ const fx=((i*700+200 - cam*1.25)%(W+900)+W+900)%(W+900)-450; drawLeafClump(fx,H+70,1.0,"rgba(20,70,35,.85)"); }
   const vg=ctx.createRadialGradient(W/2,H/2,H*0.5,W/2,H/2,H*1.05); vg.addColorStop(0,"rgba(0,0,0,0)"); vg.addColorStop(1,"rgba(5,30,15,.45)"); ctx.fillStyle=vg; ctx.fillRect(0,0,W,H);
 }
-function drawWormSmall(k){ ctx.strokeStyle="#e38fa3"; ctx.lineWidth=12; ctx.lineCap="round"; ctx.beginPath(); ctx.moveTo(-18,0); ctx.quadraticCurveTo(-4,-10-k,8,-2); ctx.lineTo(16,-14-k); ctx.stroke(); ctx.fillStyle="#e38fa3"; ctx.beginPath(); ctx.arc(18,-18-k,8,0,Math.PI*2); ctx.fill(); ctx.fillStyle="#fff"; ctx.beginPath(); ctx.arc(16,-20-k,3,0,Math.PI*2); ctx.arc(22,-20-k,3,0,Math.PI*2); ctx.fill(); ctx.fillStyle="#222"; ctx.beginPath(); ctx.arc(17,-20-k,1.4,0,Math.PI*2); ctx.arc(23,-20-k,1.4,0,Math.PI*2); ctx.fill(); }
+// família do Sherman: cada um de uma cor, todos de bolinhas
+const WORM_COLORS=[{body:"#5aa9ff",dot:"#fff5a8"},{body:"#ffb347",dot:"#ffffff"},{body:"#7ed37e",dot:"#ff8fb1"},{body:"#c38cff",dot:"#fff5a8"}];
+function drawWormSmall(k,col){ col=col||WORM_COLORS[0];
+  ctx.strokeStyle=col.body; ctx.lineWidth=12; ctx.lineCap="round"; ctx.beginPath(); ctx.moveTo(-18,0); ctx.quadraticCurveTo(-4,-10-k,8,-2); ctx.lineTo(16,-14-k); ctx.stroke();
+  ctx.fillStyle=col.dot; for(const [px,py] of [[-14,-2],[-6,-6-k*0.6],[2,-4-k*0.4],[10,-7-k*0.8]]){ ctx.beginPath(); ctx.arc(px,py,2.2,0,Math.PI*2); ctx.fill(); }
+  ctx.fillStyle=col.body; ctx.beginPath(); ctx.arc(18,-18-k,8,0,Math.PI*2); ctx.fill(); ctx.fillStyle="#fff"; ctx.beginPath(); ctx.arc(16,-20-k,3,0,Math.PI*2); ctx.arc(22,-20-k,3,0,Math.PI*2); ctx.fill(); ctx.fillStyle="#222"; ctx.beginPath(); ctx.arc(17,-20-k,1.4,0,Math.PI*2); ctx.arc(23,-20-k,1.4,0,Math.PI*2); ctx.fill(); }
 
 // ---------- Fase 2: desenho do navio ----------
 function drawBarrel(x,y,r,rot){

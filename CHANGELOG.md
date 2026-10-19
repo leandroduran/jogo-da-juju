@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.3.4
+- Tatu-bola lê folhas com linhas separadas por lado (`layout:'lr'` em `CFG.sheets.crab3`): parado/andando/enrolar à direita, andando/enrolar à esquerda. Enrola uma vez ao ser acertado, segura e desenrola antes de fugir.
+
+## 0.3.3
+- Família do Sherman: quatro minhocas, cada uma de uma cor (azul, laranja, verde, lilás), todas de bolinhas — e o Sherman também ganhou bolinhas.
+- Ravina: ilhotas maiores (150 px) — cabem os três heróis e o Sherman.
+- Cipós vão e voltam: ficam pendurados do lado em que foram largados; na ilhota com dois cipós, vai pro lado que o herói está olhando.
+- Clareira: tronco oco com notinhas e "?" marca onde a família está; a escuta vale em toda a clareira e uma mata fechada no fim impede passar direto.
+- Trocas de líder não acontecem no meio de um cipó nem em pontos já ultrapassados há muito.
+
+## 0.3.2
+- Tatus-bola na floresta (cinco): empurram ao encostar, castanha faz virar bolinha, depois fogem de costas. Folha opcional `assets/ep3/tatu_sheet.png` (mesmo esquema do caranguejo).
+
 ## 0.3.1
 - Sherman anda de pé no chão, logo atrás de quem lidera (não vai mais na cabeça). `CFG.worm.offset` = distância atrás do líder.
 
